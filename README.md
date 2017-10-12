@@ -1,5 +1,12 @@
 # os-assng-1-threads
 
+Found Resources:
+http://www.mit.edu/~mkgray/project/silk/pthreads/src/pthreads-1_50_0/pthreads/pthread.c
+http://nitish712.blogspot.com/2012/10/thread-library-using-context-switching.html
+
+
+
+#===============================================================================#
 Instructions
 
 Overview

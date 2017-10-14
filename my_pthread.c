@@ -82,7 +82,7 @@ int my_pthread_create(my_pthread_t * thread, pthread_attr_t * attr, void *(*func
     threadCB->thread_id= ++threadid;
     *thread = threadCB->thread_id;
         
-    makecontext(&(threadCB->thread_context),(void (*)(void))&helper,2,start_routine,arg);
+    makecontext(&(threadCB->thread_context),(void (*)(void))&helper,2,function,arg);
     
     printf("Thread is created %ld\n", *thread);
     enqueue(queue,threadCB);
@@ -94,12 +94,12 @@ int my_pthread_create(my_pthread_t * thread, pthread_attr_t * attr, void *(*func
   return 0;
 };
 
-void *helper(void *(*start_routine)(void*), void *arg){
+void *helper(void *(*function)(void*), void *arg){
 
   void *returnValue;
   tcb_ptr currentThread = getCurrentControlBlock_Safe();
   printf("In Helper");
-  returnValue = (*start_routine)(arg);
+  returnValue = (*function)(arg);
   sigprocmask(SIG_BLOCK,&signalMask,NULL);
   finishedThread_ptr finishedThread = getCompletedThread();
   if(finishedThread != NULL) {  
@@ -156,50 +156,42 @@ int my_pthread_join(my_pthread_t thread, void **value_ptr) {
   tcb_ptr joinThread = getCurrentBlockByThread(queue,thread);
   
   //check if callingthread is blocking on itself or is null
-  if(callingThread ==NULL || callingThread == joinThread)
-    {       
-      //printf("\n 100.1 \n");
-      sigprocmask(SIG_UNBLOCK,&signalMask,NULL);
+  if(callingThread == NULL || callingThread == joinThread) {       
+    sigprocmask(SIG_UNBLOCK, &signalMask, NULL);
+    return -1;
+  }
+  if(joinThread == NULL) {
+    //The thread is finished hence can be found in finished Queue
+    finishedThread_ptr finishedThread = getFinishedThread(finishedQueue,thread,1);
+    sigprocmask(SIG_UNBLOCK,&signalMask,NULL);
+    if(finishedThread) {
+      if(value_ptr)
+	*value_ptr =*(finishedThread->returnValue);
+      free(finishedThread);
+      return 0;
+    }
+    else
       return -1;
-    }
-  if(joinThread==NULL)
-    {       //printf("\n 100.2 \n");
-      //The thread is finished hence can be found in finished Queue
-      FinishedThread_Ptr finishedThread = getFinishedThread(finishedQueue,thread,1);
-      sigprocmask(SIG_UNBLOCK,&signalMask,NULL);
-      if(finishedThread)
-	{  //printf("\n100.3\n");
-	  if(value_ptr)
-	    {//printf("\n 100.4 assigning value\n");
-	      *value_ptr =*(finishedThread->returnValue);
-	    }
-	  free(finishedThread);
-	  return 0;
-	}
-      else
-	return -1;
-      
-    }
+    
+  }
   
   //printf("\n Value is %d :",(joinThread->blockedThreads==NULL));
-  if(joinThread->blockedThreads==NULL)
-    {
-      addToBlockedThreadList(joinThread,callingThread);
-      int isBlocked=callingThread->isBlocked;
-      sigprocmask(SIG_UNBLOCK,&signalMask,NULL);
-      while(isBlocked){
-	isBlocked=callingThread->isBlocked;
-      }
-      sigprocmask(SIG_BLOCK,&signalMask,NULL);
-      FinishedThread_Ptr finishedThread = getFinishedThread(finishedQueue,thread,1);
-      sigprocmask(SIG_UNBLOCK,&signalMask,NULL);
-      //printf("\n 100.51 \n");
-      if(finishedThread !=NULL && status !=NULL) {
-	if(status)
-	  *status=*(finishedThread->returnValue);
-	free(finishedThread);
-      }
-      return 0;
+  if(joinThread->blockedThreads == NULL) {
+    addToBlockedThreadList(joinThread,callingThread);
+    int isBlocked=callingThread->isBlocked;
+    sigprocmask(SIG_UNBLOCK,&signalMask,NULL);
+    while(isBlocked){
+      isBlocked=callingThread->isBlocked;
+    }
+    sigprocmask(SIG_BLOCK,&signalMask,NULL);
+    finishedThread_ptr finishedThread = getFinishedThread(finishedQueue,thread,1);
+    sigprocmask(SIG_UNBLOCK,&signalMask,NULL);
+    if(finishedThread != NULL && status != NULL) {
+      if(value_ptr)
+	*value_ptr=*(finishedThread->returnValue);
+      free(finishedThread);
+    }
+    return 0;
     }
   else {
     sigprocmask(SIG_UNBLOCK,&signalMask,NULL);
@@ -209,17 +201,58 @@ int my_pthread_join(my_pthread_t thread, void **value_ptr) {
 
 /* initial the mutex lock */
 int my_pthread_mutex_init(my_pthread_mutex_t *mutex, const pthread_mutexattr_t *mutexattr) {
-	return 0;
+  printf("Mutex init \n");
+  mutex->lock=0;
+  mutex->owner =0;
+  mutex->count=1;
+  
+  return 0;
 };
 
 /* aquire the mutex lock */
 int my_pthread_mutex_lock(my_pthread_mutex_t *mutex) {
-	return 0;
+  printf("Mutex lock called \n");
+  sigemptyset(&signalMask);
+  sigaddset(&signalMask, SIGVTALRM);
+  sigprocmask(SIG_BLOCK,&signalMask, NULL);
+  tcb_ptr currentBlock = getCurrentBlock(queue);
+  sigprocmask(SIG_UNBLOCK,&signalMask,NULL);
+  if(mutex->owner ==0 && (mutex->owner != currentBlock->thread_id) && mutex->lock==0) {
+    while(mutex->count<=0);
+    sigprocmask(SIG_BLOCK,&signalMask, NULL);
+    mutex->count--;
+    mutex->lock=1;
+    mutex->owner = currentBlock->thread_id;
+    sigprocmask(SIG_UNBLOCK,&signalMask, NULL);
+    return 0;
+  }
+  else {
+    //sigprocmask(SIG_BLOCK,&signalMask,NULL);
+    while(1) {
+      printf("\n Spinning \n");
+      if(mutex->owner==0)
+	break;
+    }
+    //sigprocmask(SIG_UNBLOCK,&signalMask,NULL);
+  }
+  
+  return 0;
 };
 
 /* release the mutex lock */
 int my_pthread_mutex_unlock(my_pthread_mutex_t *mutex) {
-	return 0;
+  printf("Mutex unlock called \n");
+  sigprocmask(SIG_BLOCK,&signalMask,NULL);
+  tcb_ptr currentThread = getCurrentBlock(queue);
+  if(mutex->owner == currentThread->thread_id) {
+    mutex->count++;
+    mutex->lock=0;
+    mutex->owner =0;
+  }
+  
+  sigprocmask(SIG_UNBLOCK,&signalMask, NULL);
+
+  return 0;
 };
 
 /* destroy the mutex */

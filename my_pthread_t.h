@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ucontext.h>
+#define STACKSIZE 8 * 1024
 #define MAXTHREADS 20
 
 typedef uint my_pthread_t;
@@ -30,7 +31,7 @@ typedef struct threadControlBlock {
   int isBlocked;
   int isMain;
   struct threadControlBlock *next;
-  struct BlockedThreadList *blockedThreads;
+  struct blockedThreadList *blockedThreads;
 } tcb, *tcb_ptr; 
 
 /* mutex struct definition */
@@ -64,22 +65,22 @@ typedef struct finishedThread {
 typedef struct finishedControlBlockQueue {
   struct finishedThread *thread;
   long count;
-}*finishedQueue;
+}*finished_Queue;
 
 tcb_ptr getControlBlock_Main();
 tcb_ptr getControlBlock();
-tcb_ptr getCurrentBlockByThread(thread_Queue,my_thread_t);
+tcb_ptr getCurrentBlockByThread(thread_Queue,my_pthread_t);
 tcb_ptr getCurrentBlock(thread_Queue queue);
 int getQueueSize(thread_Queue queue);
 thread_Queue getQueue();
 void freeControlBlock(tcb_ptr);
 int next(thread_Queue);
-int enqueueToCompletedList(finishedQueue,finishedThread_ptr);
-finishedThread_ptr getFinishedThread(finishedQueue,my_pthread_t,int);
+int enqueueToCompletedList(finished_Queue,finishedThread_ptr);
+finishedThread_ptr getFinishedThread(finished_Queue,my_pthread_t,int);
 blockedThreadList_ptr getBlockedThreadList();
 int addToBlockedThreadList(tcb_ptr,tcb_ptr);
-finishedThread_ftr getCompletedThread();
-finishedQueue getFinishedQueue();
+finishedThread_ptr getCompletedThread();
+finished_Queue getFinishedQueue();
 
 /* Function Declarations: */
 

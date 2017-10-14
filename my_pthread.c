@@ -10,8 +10,7 @@
 #include <malloc.h>
 #include <sys/time.h>
 #include <signal.h>
-#define STACKSIZE 8*1024
-#define MAXTHREADS 20
+#include <string.h>
 
 typedef struct {
   my_pthread_t thread_id;
@@ -84,7 +83,7 @@ int my_pthread_create(my_pthread_t * thread, pthread_attr_t * attr, void *(*func
         
     makecontext(&(threadCB->thread_context),(void (*)(void))&helper,2,function,arg);
     
-    printf("Thread is created %ld\n", *thread);
+    printf("Thread is created %d\n", *thread);
     enqueue(queue,threadCB);
     sigprocmask(SIG_UNBLOCK, &signalMask, NULL);
     sigemptyset(&(threadCB->thread_context.uc_sigmask));
@@ -117,9 +116,9 @@ void *helper(void *(*function)(void*), void *arg){
 tcb_ptr getCurrentControlBlock_Safe() {
 
   tcb_ptr currentControlBlock = NULL;
-  sigprocmask(SIG_BLOCK,&signalMask,null);
+  sigprocmask(SIG_BLOCK,&signalMask,NULL);
   currentControlBlock = getCurrentBlock(queue);
-  sigprocmask(SIG_UNBLOCK,&signalMask,null);
+  sigprocmask(SIG_UNBLOCK,&signalMask,NULL);
   
   return currentControlBlock;
 
@@ -186,7 +185,7 @@ int my_pthread_join(my_pthread_t thread, void **value_ptr) {
     sigprocmask(SIG_BLOCK,&signalMask,NULL);
     finishedThread_ptr finishedThread = getFinishedThread(finishedQueue,thread,1);
     sigprocmask(SIG_UNBLOCK,&signalMask,NULL);
-    if(finishedThread != NULL && status != NULL) {
+    if(finishedThread != NULL && value_ptr != NULL) {
       if(value_ptr)
 	*value_ptr=*(finishedThread->returnValue);
       free(finishedThread);

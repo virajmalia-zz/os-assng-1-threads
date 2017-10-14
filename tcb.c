@@ -152,7 +152,7 @@ thread_Queue getQueue() {
   return queue;
 }
 
-int enqueueToCompletedList(finishedQueue queue,finishedThread_ptr finishedThread ) {
+int enqueueToCompletedList(finished_Queue queue,finishedThread_ptr finishedThread ) {
   if(queue != NULL && finishedThread !=NULL) {
     finishedThread->next=queue->thread;
     queue->thread = finishedThread;
@@ -161,7 +161,7 @@ int enqueueToCompletedList(finishedQueue queue,finishedThread_ptr finishedThread
 }
 
 
-finishedThread_ptr getFinishedThread(finishedQueue queue,my_pthread_t thread_id,int flag) {
+finishedThread_ptr getFinishedThread(finished_Queue queue,my_pthread_t thread_id,int flag) {
 
   if(queue!=NULL) {
     finishedThread_ptr thread= queue->thread;
@@ -194,7 +194,7 @@ blockedThreadList_ptr getBlockedThreadList() {
 
 int addToBlockedThreadList(tcb_ptr fromNode,tcb_ptr toNode ) {
   
-  blockedThreadList_ptr list =getBlockedThreadList();
+  blockedThreadList_ptr list = getBlockedThreadList();
   if(fromNode != NULL) {
     list->thread = toNode;
     list->next = fromNode->blockedThreads;
@@ -222,8 +222,8 @@ finishedThread_ptr getCompletedThread() {
 }
 
 
-finishedQueue getFinishedQueue() {
-  finishedQueue finishedQueue = (finishedQueue)malloc(sizeof(struct finishedControlBlockQueue));
+finished_Queue getFinishedQueue() {
+  finished_Queue finishedQueue = (finished_Queue)malloc(sizeof(struct finishedControlBlockQueue));
   finishedQueue->thread = NULL;
   finishedQueue->count = 0;
   

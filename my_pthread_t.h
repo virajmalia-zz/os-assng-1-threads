@@ -4,7 +4,7 @@
 
 // name:
 // username of iLab:
-// iLab Server: 
+// iLab Server:
 #ifndef MY_PTHREAD_T_H
 #define MY_PTHREAD_T_H
 
@@ -16,12 +16,19 @@
 #include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <ucontext.h>
+#include "queue.h"
 
 typedef uint my_pthread_t;
 
 typedef struct threadControlBlock {
-	/* add something here */
-} tcb; 
+  struct threadControlBlock *next_tcb;
+  uint tid;
+  uint priority;
+  char *SP;
+  //char *PC;
+  bool status;
+} tcb;
 
 /* mutex struct definition */
 typedef struct my_pthread_mutex_t {

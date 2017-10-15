@@ -27,7 +27,7 @@ extern ucontext_t common_context;
 struct sigaction scheduler_interrupt_handler;
 struct itimerval timeslice;
 sigset_t signalMask;
-void scheduler();
+void scheduler(int signum);
 void *helper(void *(*function)(void*), void *arg);
 thread_Queue queue = NULL;
 finished_Queue finishedQueue = NULL;
@@ -35,8 +35,7 @@ tcb_ptr getCurrentControlBlock_Safe();
 long millisec;
 
 // init process
-void my_pthread_init(long period)
-{
+void my_pthread_init(long period){
   threadid = 1;
   sigemptyset(&signalMask);
   sigaddset(&signalMask, SIGVTALRM);
@@ -63,7 +62,6 @@ void my_pthread_init(long period)
   printf("Exiting init");
 }
 
-
 /* create a new thread */
 int my_pthread_create(my_pthread_t * thread, pthread_attr_t * attr, void *(*function)(void*), void * arg) {
   my_pthread_init(1000L);
@@ -80,10 +78,10 @@ int my_pthread_create(my_pthread_t * thread, pthread_attr_t * attr, void *(*func
     //temp =rand();
     threadCB->thread_id= ++threadid;
     *thread = threadCB->thread_id;
-        
+
     makecontext(&(threadCB->thread_context),(void (*)(void))&helper,2,function,arg);
-    
-    printf("Thread is created %d\n", *thread);
+
+    printf("Thread is created %ld\n", *thread);
     enqueue(queue,threadCB);
     sigprocmask(SIG_UNBLOCK, &signalMask, NULL);
     sigemptyset(&(threadCB->thread_context.uc_sigmask));
@@ -101,13 +99,13 @@ void *helper(void *(*function)(void*), void *arg){
   returnValue = (*function)(arg);
   sigprocmask(SIG_BLOCK,&signalMask,NULL);
   finishedThread_ptr finishedThread = getCompletedThread();
-  if(finishedThread != NULL) {  
+  if(finishedThread != NULL) {
     *(finishedThread->returnValue) = returnValue;
     finishedThread->thread_id = currentThread->thread_id;
     enqueueToCompletedList(finishedQueue,finishedThread);
   }
   sigprocmask(SIG_UNBLOCK,&signalMask,NULL);
-  
+
   return returnValue;
   // set this value to the completed nodes return value
 }
@@ -118,8 +116,8 @@ tcb_ptr getCurrentControlBlock_Safe() {
   tcb_ptr currentControlBlock = NULL;
   sigprocmask(SIG_BLOCK,&signalMask,NULL);
   currentControlBlock = getCurrentBlock(queue);
-  sigprocmask(SIG_UNBLOCK,&signalMask,NULL);
-  
+  sigprocmask(SIG_UNBLOCK,&signalMask,null);
+
   return currentControlBlock;
 
 }
@@ -152,9 +150,9 @@ int my_pthread_join(my_pthread_t thread, void **value_ptr) {
   sigprocmask(SIG_BLOCK,&signalMask,NULL);
   tcb_ptr callingThread = getCurrentBlock(queue);
   tcb_ptr joinThread = getCurrentBlockByThread(queue,thread);
-  
+
   //check if callingthread is blocking on itself or is null
-  if(callingThread == NULL || callingThread == joinThread) {       
+  if(callingThread == NULL || callingThread == joinThread) {
     sigprocmask(SIG_UNBLOCK, &signalMask, NULL);
     return -1;
   }
@@ -170,9 +168,9 @@ int my_pthread_join(my_pthread_t thread, void **value_ptr) {
     }
     else
       return -1;
-    
+
   }
-  
+
   //printf("\n Value is %d :",(joinThread->blockedThreads==NULL));
   if(joinThread->blockedThreads == NULL) {
     addToBlockedThreadList(joinThread,callingThread);
@@ -203,7 +201,7 @@ int my_pthread_mutex_init(my_pthread_mutex_t *mutex, const pthread_mutexattr_t *
   mutex->lock=0;
   mutex->owner =0;
   mutex->count=1;
-  
+
   return 0;
 };
 
@@ -233,7 +231,7 @@ int my_pthread_mutex_lock(my_pthread_mutex_t *mutex) {
     }
     //sigprocmask(SIG_UNBLOCK,&signalMask,NULL);
   }
-  
+
   return 0;
 };
 
@@ -247,7 +245,7 @@ int my_pthread_mutex_unlock(my_pthread_mutex_t *mutex) {
     mutex->lock=0;
     mutex->owner =0;
   }
-  
+
   sigprocmask(SIG_UNBLOCK,&signalMask, NULL);
 
   return 0;
@@ -261,4 +259,3 @@ int my_pthread_mutex_destroy(my_pthread_mutex_t *mutex) {
   mutex->count = NULL;
 	return 0;
 };
-

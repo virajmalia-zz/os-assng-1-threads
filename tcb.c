@@ -37,11 +37,11 @@ tcb_ptr getControlBlock(){
 
 int enqueue(thread_Queue queue,tcb_ptr tcb) {
 
-  //check if queue or tcb is null 
+  //check if queue or tcb is null
   printf("Enqueing the thread\n");
-  
+
   if(queue->head == NULL) {
-    //this is the first node 
+    //this is the first node
     printf("\nThis is first node\n");
     tcb->next= tcb;
     queue->head =tcb;
@@ -68,11 +68,11 @@ int dequeue(thread_Queue queue) {
     tcb_ptr head,tail,temp;
     head = queue -> head;
     tail = queue -> tail;
-    
+
     if(head != NULL) {
       temp = queue->head->next; //removing the head hence storing next block address in temp
       if(queue ->count ==1) {
-	     queue->head = queue->tail= NULL; 
+	     queue->head = queue->tail= NULL;
       }
       else {
 	     printf("\n queue has more than 1 elements hence dequeing");
@@ -86,7 +86,7 @@ int dequeue(thread_Queue queue) {
     else {
       return 0;
     }
-    
+
   }
   return 0;
 }
@@ -128,18 +128,18 @@ tcb_ptr getCurrentBlockByThread(thread_Queue queue,my_pthread_t threadid) {
   tcb_ptr dummyThread=NULL;
   if(headBlock!=NULL)
     dummyThread = headBlock->next;
-  
+
   while((headBlock != dummyThread)) {
     if(dummyThread ->thread_id == threadid)
       return dummyThread;
-      
+
     dummyThread = dummyThread->next;
   }
   return NULL;
 }
 
 int getQueueSize(thread_Queue queue) {
-  
+
   return queue->count;
 }
 
@@ -192,7 +192,7 @@ blockedThreadList_ptr getBlockedThreadList() {
 }
 
 int addToBlockedThreadList(tcb_ptr fromNode,tcb_ptr toNode ) {
-  
+
   blockedThreadList_ptr list = getBlockedThreadList();
   if(fromNode != NULL) {
     list->thread = toNode;
@@ -225,6 +225,6 @@ finished_Queue getFinishedQueue() {
   finished_Queue finishedQueue = (finished_Queue)malloc(sizeof(struct finishedControlBlockQueue));
   finishedQueue->thread = NULL;
   finishedQueue->count = 0;
-  
+
   return finishedQueue;
 }

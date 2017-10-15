@@ -1,11 +1,11 @@
 #include <stdio.h>
 
-#include "my_pthread.h"
+#include "my_pthread.c"
 
 void scheduler(int signum){
 
     int q_size = getQueueSize(queue);
-    bool to_be_removed = 0;
+    int to_be_removed = 0;
 
     if(q_size == 1){
         if( getCurrentBlock(queue)->isExecuted ){

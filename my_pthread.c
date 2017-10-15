@@ -34,6 +34,36 @@ finished_Queue finishedQueue = NULL;
 tcb_ptr getCurrentControlBlock_Safe();
 long millisec;
 
+void threadCompleted() {
+
+  tcb_ptr currentNode = getCurrentControlBlock_Safe();
+  blockedThreadList_ptr blockedThread = currentNode->blockedThreads;
+
+  while(blockedThread != NULL)
+  {
+    blockedThread->thread->isBlocked =0;
+    blockedThread = blockedThread->next;
+  }
+  
+  printf("\n Thread completed : %d",currentNode->thread_id );
+  currentNode->isExecuted=1;
+  raise(SIGVTALRM);
+}
+
+ucontext_t getCommonContext() {
+  static int contextAlreadySet = 0;
+  if(!contextAlreadySet)
+  {
+    getcontext(&common_context);
+    common_context.uc_link = 0;
+    common_context.uc_stack.ss_sp = malloc(STACKSIZE);
+    common_context.uc_stack.ss_size = STACKSIZE;
+    common_context.uc_stack.ss_flags= 0;
+    makecontext( &common_context, (void (*) (void))&threadCompleted, 0);
+    contextAlreadySet = 1;
+  }
+}
+
 // init process
 void my_pthread_init(long period){
   threadid = 1;
@@ -81,7 +111,7 @@ int my_pthread_create(my_pthread_t * thread, pthread_attr_t * attr, void *(*func
 
     makecontext(&(threadCB->thread_context),(void (*)(void))&helper,2,function,arg);
 
-    printf("Thread is created %ld\n", *thread);
+    printf("Thread is created %d\n", *thread);
     enqueue(queue,threadCB);
     sigprocmask(SIG_UNBLOCK, &signalMask, NULL);
     sigemptyset(&(threadCB->thread_context.uc_sigmask));
@@ -116,7 +146,7 @@ tcb_ptr getCurrentControlBlock_Safe() {
   tcb_ptr currentControlBlock = NULL;
   sigprocmask(SIG_BLOCK,&signalMask,NULL);
   currentControlBlock = getCurrentBlock(queue);
-  sigprocmask(SIG_UNBLOCK,&signalMask,null);
+  sigprocmask(SIG_UNBLOCK,&signalMask,NULL);
 
   return currentControlBlock;
 
@@ -254,8 +284,8 @@ int my_pthread_mutex_unlock(my_pthread_mutex_t *mutex) {
 /* destroy the mutex */
 int my_pthread_mutex_destroy(my_pthread_mutex_t *mutex) {
   printf("Mutex destroy \n");
-  mutex->lock = NULL;
-  mutex->owner = NULL;
-  mutex->count = NULL;
+  mutex->lock = -1;
+  mutex->owner = -1;
+  mutex->count = -1;
 	return 0;
 };

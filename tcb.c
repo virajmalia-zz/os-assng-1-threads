@@ -32,6 +32,7 @@ tcb_ptr getControlBlock(){
   controlBlock->next = NULL ;
 
   return controlBlock;
+
 }
 
 int enqueue(thread_Queue queue,tcb_ptr tcb) {
@@ -71,7 +72,7 @@ int dequeue(thread_Queue queue) {
     if(head != NULL) {
       temp = queue->head->next; //removing the head hence storing next block address in temp
       if(queue ->count ==1) {
-	queue->head = queue->tail= NULL;
+	     queue->head = queue->tail= NULL;
       }
       else {
 	     printf("\n queue has more than 1 elements hence dequeing");
@@ -192,7 +193,7 @@ blockedThreadList_ptr getBlockedThreadList() {
 
 int addToBlockedThreadList(tcb_ptr fromNode,tcb_ptr toNode ) {
 
-  blockedThreadList_ptr list =getBlockedThreadList();
+  blockedThreadList_ptr list = getBlockedThreadList();
   if(fromNode != NULL) {
     list->thread = toNode;
     list->next = fromNode->blockedThreads;

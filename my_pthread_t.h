@@ -17,30 +17,75 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ucontext.h>
-#include "queue.h"
+#define STACKSIZE 8 * 1024
+#define MAXTHREADS 20
 
 typedef uint my_pthread_t;
 
 typedef struct threadControlBlock {
-  struct threadControlBlock *next_tcb;
-  uint tid;
-  uint priority;
-  char *SP;
-  //char *PC;
-  bool status;
-} tcb;
+	/* add something here */
+  my_pthread_t thread_id;
+  ucontext_t thread_context;
+  int isActive;
+  int isExecuted;
+  int isBlocked;
+  int isMain;
+  struct threadControlBlock *next;
+  struct blockedThreadList *blockedThreads;
+} tcb, *tcb_ptr;
 
 /* mutex struct definition */
 typedef struct my_pthread_mutex_t {
 	/* add something here */
+  int lock;
+  int count;
+  volatile my_pthread_t owner;
 } my_pthread_mutex_t;
 
 /* define your data structures here: */
 
 // Feel free to add your own auxiliary data structures
+typedef struct threadQueue {
+  tcb_ptr head;
+  tcb_ptr tail;
+  long count;
+}*thread_Queue;
 
+typedef struct blockedThreadList {
+  tcb_ptr thread;
+  struct blockedThreadList *next;
+}*blockedThreadList_ptr;
+
+typedef struct finishedThread {
+  my_pthread_t thread_id;
+  void **returnValue;
+  struct finishedThread *next;
+}*finishedThread_ptr;
+
+typedef struct finishedControlBlockQueue {
+  struct finishedThread *thread;
+  long count;
+}*finished_Queue;
+
+tcb_ptr getControlBlock_Main();
+tcb_ptr getControlBlock();
+tcb_ptr getCurrentBlockByThread(thread_Queue,my_pthread_t);
+tcb_ptr getCurrentBlock(thread_Queue queue);
+int getQueueSize(thread_Queue queue);
+thread_Queue getQueue();
+void freeControlBlock(tcb_ptr);
+int next(thread_Queue);
+int enqueueToCompletedList(finished_Queue,finishedThread_ptr);
+finishedThread_ptr getFinishedThread(finished_Queue,my_pthread_t,int);
+blockedThreadList_ptr getBlockedThreadList();
+int addToBlockedThreadList(tcb_ptr,tcb_ptr);
+finishedThread_ptr getCompletedThread();
+finished_Queue getFinishedQueue();
 
 /* Function Declarations: */
+
+// init process
+void my_pthread_init(long period);
 
 /* create a new thread */
 int my_pthread_create(my_pthread_t * thread, pthread_attr_t * attr, void *(*function)(void*), void * arg);

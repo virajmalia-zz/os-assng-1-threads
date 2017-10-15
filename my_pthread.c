@@ -27,7 +27,7 @@ extern ucontext_t common_context;
 struct sigaction scheduler_interrupt_handler;
 struct itimerval timeslice;
 sigset_t signalMask;
-void scheduler();
+void scheduler(int signum);
 void *helper(void *(*function)(void*), void *arg);
 thread_Queue queue = NULL;
 finished_Queue finishedQueue = NULL;
@@ -35,8 +35,7 @@ tcb_ptr getCurrentControlBlock_Safe();
 long millisec;
 
 // init process
-void my_pthread_init(long period)
-{
+void my_pthread_init(long period){
   threadid = 1;
   sigemptyset(&signalMask);
   sigaddset(&signalMask, SIGVTALRM);
@@ -63,7 +62,6 @@ void my_pthread_init(long period)
   printf("Exiting init");
 }
 
-
 /* create a new thread */
 int my_pthread_create(my_pthread_t * thread, pthread_attr_t * attr, void *(*function)(void*), void * arg) {
   my_pthread_init(1000L);
@@ -83,7 +81,7 @@ int my_pthread_create(my_pthread_t * thread, pthread_attr_t * attr, void *(*func
 
     makecontext(&(threadCB->thread_context),(void (*)(void))&helper,2,function,arg);
 
-    printf("Thread is created %d\n", *thread);
+    printf("Thread is created %ld\n", *thread);
     enqueue(queue,threadCB);
     sigprocmask(SIG_UNBLOCK, &signalMask, NULL);
     sigemptyset(&(threadCB->thread_context.uc_sigmask));
@@ -118,7 +116,7 @@ tcb_ptr getCurrentControlBlock_Safe() {
   tcb_ptr currentControlBlock = NULL;
   sigprocmask(SIG_BLOCK,&signalMask,NULL);
   currentControlBlock = getCurrentBlock(queue);
-  sigprocmask(SIG_UNBLOCK,&signalMask,NULL);
+  sigprocmask(SIG_UNBLOCK,&signalMask,null);
 
   return currentControlBlock;
 

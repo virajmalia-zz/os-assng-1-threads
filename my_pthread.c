@@ -149,7 +149,6 @@ void my_pthread_exit(void *value_ptr) {
 
 /* wait for thread termination */
 int my_pthread_join(my_pthread_t thread, void **value_ptr) {
-  //block signal
   sigprocmask(SIG_BLOCK,&signalMask,NULL);
   tcb_ptr callingThread = getCurrentBlock(queue);
   tcb_ptr joinThread = getCurrentBlockByThread(queue,thread);
@@ -256,6 +255,10 @@ int my_pthread_mutex_unlock(my_pthread_mutex_t *mutex) {
 
 /* destroy the mutex */
 int my_pthread_mutex_destroy(my_pthread_mutex_t *mutex) {
+  printf("Mutex destroy \n");
+  mutex->lock = NULL;
+  mutex->owner = NULL;
+  mutex->count = NULL;
 	return 0;
 };
 

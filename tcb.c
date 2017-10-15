@@ -48,7 +48,7 @@ int enqueue(thread_Queue queue,tcb_ptr tcb) {
     queue->tail=tcb;
   }
   else {
-    printf("else here\n");
+    printf("Not first\n");
     tcb->next =queue->head; //inserts tcb behinf the head in a circular queue
     queue->tail->next= tcb; //the existing tail should point to this tcb
     queue->tail =tcb; //the tail is the new tcb hence update it
@@ -72,12 +72,12 @@ int dequeue(thread_Queue queue) {
     if(head != NULL) {
       temp = queue->head->next; //removing the head hence storing next block address in temp
       if(queue ->count ==1) {
-	queue->head = queue->tail= NULL; 
+	     queue->head = queue->tail= NULL; 
       }
       else {
-	printf("\n queue has more than 1 elements hence dequeing");
-	queue->head=temp; //temp is next block which is new head
-	tail->next=queue->head;  //tail next block is new head
+	     printf("\n queue has more than 1 elements hence dequeing");
+	     queue->head=temp; //temp is next block which is new head
+	     tail->next=queue->head;  //tail next block is new head
       }
       freeControlBlock(head); //free the old head
       printf("\nFreed a block on queue");
@@ -101,7 +101,6 @@ void freeControlBlock(tcb_ptr controlBlock) {
 int next(thread_Queue queue){
 
   if(queue!= NULL) {
-    printf("Stuck here\n");
     tcb_ptr current = queue -> head;
     if(current != NULL) {
       queue->tail = current;
@@ -172,9 +171,9 @@ finishedThread_ptr getFinishedThread(finished_Queue queue,my_pthread_t thread_id
     }
     if(flag && thread!=NULL) {
       if(previous_thread == NULL)
-	queue->thread  = thread->next;
+	     queue->thread  = thread->next;
       else
-	previous_thread->next = thread->next;
+	     previous_thread->next = thread->next;
     }
     return thread;
   }

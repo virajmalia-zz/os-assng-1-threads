@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#include "my_pthread.h"
+#include "my_pthread.c"
 
 inline void findQ(){
 
@@ -33,7 +33,7 @@ L1:
     }
 
     int q_size = getQueueSize(queue);
-    bool to_be_removed = 0;
+    int to_be_removed = 0;
 
     if(q_size == 1){
         tcb_ptr curr_context = getCurrentBlock(queue);

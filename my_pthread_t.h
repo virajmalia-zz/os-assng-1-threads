@@ -83,6 +83,10 @@ blockedThreadList_ptr getBlockedThreadList();
 int addToBlockedThreadList(tcb_ptr,tcb_ptr);
 finishedThread_ptr getCompletedThread();
 finished_Queue getFinishedQueue();
+int enqueue(thread_Queue queue,tcb_ptr tcb);
+int dequeue(thread_Queue queue);
+void threadCompleted();
+ucontext_t getCommonContext();
 
 /* Function Declarations: */
 

@@ -7,6 +7,7 @@
 // iLab Server:
 
 #include "my_pthread_t.h"
+
 #include <malloc.h>
 #include <sys/time.h>
 #include <signal.h>
@@ -29,7 +30,8 @@ struct itimerval timeslice;
 sigset_t signalMask;
 void scheduler(int signum);
 void *helper(void *(*function)(void*), void *arg);
-thread_Queue queue[4] = NULL;   // 4 priority level queues
+//thread_Queue queue[4] = NULL;   // 4 priority level queues
+thread_HQ queue = NULL;
 finished_Queue finishedQueue = NULL;
 tcb_ptr getCurrentControlBlock_Safe();
 long millisec;
@@ -71,9 +73,7 @@ void my_pthread_init(long period){
   sigaddset(&signalMask, SIGVTALRM);
   //intializing the context of the scheduler
   finishedQueue = getFinishedQueue();
-  for(int i=0; i<4; i++){
-      queue[i] = getQueue();
-  }
+  queue = heap_init();
   millisec = period;
   tcb_ptr mainThread = getControlBlock_Main();
   //getcontext(&(MainThread->thread_context));
@@ -81,7 +81,7 @@ void my_pthread_init(long period){
   getCommonContext();
   mainThread->thread_context.uc_link = &common_context;
   mainThread->thread_id = threadid;
-  enqueue(queue[0],mainThread);
+  heap_push(queue, mainThread);
   memset(&scheduler_interrupt_handler, 0, sizeof (scheduler_interrupt_handler));
   scheduler_interrupt_handler.sa_handler= &scheduler;
   sigaction(SIGVTALRM,&scheduler_interrupt_handler,NULL);
@@ -97,7 +97,7 @@ void my_pthread_init(long period){
 /* create a new thread */
 int my_pthread_create(my_pthread_t * thread, pthread_attr_t * attr, void *(*function)(void*), void * arg) {
   int temp;
-  if(queue[0] != NULL) {
+  if(queue != NULL) {
     sigprocmask(SIG_BLOCK,&signalMask,NULL);
     tcb_ptr  threadCB= getControlBlock_Main();
     getcontext((&threadCB->thread_context));
@@ -105,7 +105,7 @@ int my_pthread_create(my_pthread_t * thread, pthread_attr_t * attr, void *(*func
     threadCB->thread_context.uc_stack.ss_size=STACKSIZE;
     threadCB->thread_context.uc_stack.ss_flags=0;
     threadCB->isMain=0;
-    threadCB->priority = 0;
+    threadCB->priority = 4;
     threadCB->t_count = 0;
     threadCB->thread_context.uc_link = &common_context;
     //temp =rand();
@@ -115,7 +115,7 @@ int my_pthread_create(my_pthread_t * thread, pthread_attr_t * attr, void *(*func
     makecontext(&(threadCB->thread_context),(void (*)(void))&helper,2,function,arg);
 
     printf("Thread is created %d\n", *thread);
-    enqueue(queue,threadCB);
+    heap_push(queue, threadCB);
     sigprocmask(SIG_UNBLOCK, &signalMask, NULL);
     sigemptyset(&(threadCB->thread_context.uc_sigmask));
     return 0;
@@ -148,7 +148,7 @@ tcb_ptr getCurrentControlBlock_Safe() {
 
   tcb_ptr currentControlBlock = NULL;
   sigprocmask(SIG_BLOCK,&signalMask,NULL);
-  currentControlBlock = getCurrentBlock(queue[]);    // How to handle multiple queues??
+  currentControlBlock = getCurrentBlock(queue);
   sigprocmask(SIG_UNBLOCK,&signalMask,null);
 
   return currentControlBlock;
@@ -166,7 +166,7 @@ int my_pthread_yield() {
 void my_pthread_exit(void *value_ptr) {
   printf("\n-----Exit called-----\n");
   sigprocmask(SIG_BLOCK,&signalMask,NULL);
-  tcb_ptr currentThread= getCurrentBlock(queue4);    // How to handle multiple queues??
+  tcb_ptr currentThread= getCurrentBlock(queue);    // How to handle multiple queues??
   finishedThread_ptr finishedThread = getCompletedThread();
   if(finishedThread !=NULL && currentThread != NULL) {
     *(finishedThread->returnValue) = value_ptr;
@@ -181,8 +181,8 @@ void my_pthread_exit(void *value_ptr) {
 /* wait for thread termination */
 int my_pthread_join(my_pthread_t thread, void **value_ptr) {
   sigprocmask(SIG_BLOCK,&signalMask,NULL);
-  tcb_ptr callingThread = getCurrentBlock(queue[]);
-  tcb_ptr joinThread = getCurrentBlockByThread(queue[],thread); //How do you handle multiple queues
+  tcb_ptr callingThread = getCurrentBlock(queue);
+  tcb_ptr joinThread = getCurrentBlockByThread(queue, thread); //How do you handle multiple queues
 
   //check if callingthread is blocking on itself or is null
   if(callingThread == NULL || callingThread == joinThread) {
@@ -244,7 +244,7 @@ int my_pthread_mutex_lock(my_pthread_mutex_t *mutex) {
   sigemptyset(&signalMask);
   sigaddset(&signalMask, SIGVTALRM);
   sigprocmask(SIG_BLOCK,&signalMask, NULL);
-  tcb_ptr currentBlock = getCurrentBlock(queue[]);    // How to handle multiple queues??
+  tcb_ptr currentBlock = getCurrentBlock(queue);
   sigprocmask(SIG_UNBLOCK,&signalMask,NULL);
   if(mutex->owner ==0 && (mutex->owner != currentBlock->thread_id) && mutex->lock==0) {
     while(mutex->count<=0);
@@ -272,7 +272,7 @@ int my_pthread_mutex_lock(my_pthread_mutex_t *mutex) {
 int my_pthread_mutex_unlock(my_pthread_mutex_t *mutex) {
   printf("Mutex unlock called \n");
   sigprocmask(SIG_BLOCK,&signalMask,NULL);
-  tcb_ptr currentThread = getCurrentBlock(queue[]);   // How to handle multiple queues??
+  tcb_ptr currentThread = getCurrentBlock(queue);
   if(mutex->owner == currentThread->thread_id) {
     mutex->count++;
     mutex->lock=0;

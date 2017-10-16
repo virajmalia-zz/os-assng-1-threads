@@ -44,14 +44,13 @@ typedef struct my_pthread_mutex_t {
   volatile my_pthread_t owner;
 } my_pthread_mutex_t;
 
-/* define your data structures here: */
-
-// Feel free to add your own auxiliary data structures
+/*
 typedef struct threadQueue {
   tcb_ptr head;
   tcb_ptr tail;
   long count;
 }*thread_Queue;
+*/
 
 typedef struct blockedThreadList {
   tcb_ptr thread;
@@ -69,6 +68,7 @@ typedef struct finishedControlBlockQueue {
   long count;
 }*finished_Queue;
 
+/* Function Declarations: */
 tcb_ptr getControlBlock_Main();
 tcb_ptr getControlBlock();
 tcb_ptr getCurrentBlockByThread(thread_Queue,my_pthread_t);
@@ -87,8 +87,12 @@ int enqueue(thread_Queue queue,tcb_ptr tcb);
 int dequeue(thread_Queue queue);
 void threadCompleted();
 ucontext_t getCommonContext();
-
-/* Function Declarations: */
+///////////////////////////////
+thread_HQ heap_init();
+void heap_push(thread_HQ, tcb_ptr);
+tcb_ptr heap_pop(thread_HQ);
+tcb_ptr heap_peek(thread_HQ);
+int getQSize(thread_HQ);
 
 // init process
 void my_pthread_init(long period);

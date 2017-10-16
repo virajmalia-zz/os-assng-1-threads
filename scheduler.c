@@ -1,86 +1,60 @@
-#include <stdio.h>
-
 #include "my_pthread.c"
-
-inline void findQ(){
-
-}
 
 void scheduler(int signum){
     sigprocmask(SIG_BLOCK, &signalMask, NULL);
 
-    //check all  queues for available threads
-L1:
-    int i = 0;
-    while( empty(queue[i]) ){
-        i++;
-    }
-    thread_Queue queue = queue[i];
-    int max_count;
-    switch(i){
-        case 0:
-            max_count = 1;
-            break;
-        case 1:
-            max_count = 3;
-            break;
-        case 2:
-            max_count = 7;
-            break;
-        case 3:
-            max_count = 15;
-            break;
-    }
-
-    int q_size = getQueueSize(queue);
+    int q_size = getQSize(queue);
     int to_be_removed = 0;
 
     if(q_size == 1){
         tcb_ptr curr_context = getCurrentBlock(queue);
         if( curr_context->isExecuted ){
             // If current context has finished execution, dequeue
-            dequeue(queue);
+            heap_pop(queue);
         }
         else{
             // Thread timer check, decrease priority if uses full quanta
             if( curr_context->t_count == max_count ){
-                dequeue(queue);
-                curr_context->priority++;
-                enqueue(queue[curr_context->priority]);
+                heap_pop(queue);
+                curr_context->priority--;
+                heap_push(queue);
             }
             curr_context->t_count++;
         }
-    }
+    }   // end if (q_size == 1)
     else if(q_size > 1){
 
             tcb_ptr curr_context = getCurrentBlock(queue);
 
             if( curr_context != NULL ){
+                // Current context check
                 if( curr_context->isExecuted ){
                     to_be_removed = 1;
                     // dequeue
-                    dequeue(queue);
+                    heap_pop(queue);
                 }
                 else{
                     // Thread timer check, decrease priority if uses full quanta
                     if( curr_context->t_count == max_count ){
-                        dequeue(queue);
-                        curr_context->priority++;
-                        enqueue(queue[curr_context->priority]);
+                        heap_pop(queue);
+                        curr_context->priority--;
+                        heap_push(queue);
                     }
-                    next(queue);
+                    tcb_ptr temp_head = heap_pop(queue);    // For next context
+                    heap_push(queue, temp_head);
                 }
 
                 tcb_ptr next_context = getCurrentBlock(queue);
 
-                while( next_context != NULL && ( next_context->isBlocked || next_context->isExecuted ) ){
+                while( next_context != NULL && next_context != curr_context && ( next_context->isBlocked || next_context->isExecuted ) ){
 
                     if( next_context->isExecuted ){
                         // dequeue
-                        dequeue(queue);
+                        heap_pop(queue);
                     }
                     else{
-                        next(queue);
+                        tcb_ptr temp_head = heap_pop(queue);    // For next context
+                        heap_push(queue, temp_head);
                     }
                     next_context = getCurrentBlock(queue);
 
@@ -88,9 +62,8 @@ L1:
 
                 // If !next_context, Go to next priority queue
                 if( next_context == NULL ){
-                    goto L1;
-                    //sigprocmask(SIG_UNBLOCK, &signalMask, NULL);
-                    //exit(0);
+                    sigprocmask(SIG_UNBLOCK, &signalMask, NULL);
+                    exit(0);
                 }
 
                 if( next_context != curr_context ){
@@ -107,8 +80,8 @@ L1:
                     }
                 }
 
-            }
+            }   // end curr_context == NULL
 
         }
-sigprocmask(SIG_UNBLOCK, &signalMask, NULL);
+        sigprocmask(SIG_UNBLOCK, &signalMask, NULL);
 }

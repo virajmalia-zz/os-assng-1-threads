@@ -1,5 +1,22 @@
 #include "my_pthread.c"
 
+void setMaxCount(tcb_ptr cc){
+    switch(cc->priority){
+        case 4:
+            cc->max_count = 1;
+            break;
+        case 3:
+            cc->max_count = 3;
+            break;
+        case 2:
+            cc->max_count = 7;
+            break;
+        case 1:
+            cc->max_count = 15;
+            break;
+    }
+}
+
 void scheduler(int signum){
     sigprocmask(SIG_BLOCK, &signalMask, NULL);
 
@@ -14,10 +31,11 @@ void scheduler(int signum){
         }
         else{
             // Thread timer check, decrease priority if uses full quanta
-            if( curr_context->t_count == max_count ){
-                heap_pop(queue);
+            if( curr_context->t_count == curr_context->max_count ){
+                tcb_ptr cc = heap_pop(queue);
                 curr_context->priority--;
-                heap_push(queue);
+                setMaxCount(curr_context);
+                heap_push(queue, cc);
             }
             curr_context->t_count++;
         }
@@ -35,10 +53,11 @@ void scheduler(int signum){
                 }
                 else{
                     // Thread timer check, decrease priority if uses full quanta
-                    if( curr_context->t_count == max_count ){
-                        heap_pop(queue);
+                    if( curr_context->t_count == curr_context->max_count ){
+                        tcb_ptr cc = heap_pop(queue);
                         curr_context->priority--;
-                        heap_push(queue);
+                        setMaxCount(curr_context);
+                        heap_push(queue, cc);
                     }
                     tcb_ptr temp_head = heap_pop(queue);    // For next context
                     heap_push(queue, temp_head);

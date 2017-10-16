@@ -107,6 +107,7 @@ int my_pthread_create(my_pthread_t * thread, pthread_attr_t * attr, void *(*func
     threadCB->isMain=0;
     threadCB->priority = 4;
     threadCB->t_count = 0;
+    threadCB->max_count = 1;
     threadCB->thread_context.uc_link = &common_context;
     //temp =rand();
     threadCB->thread_id= ++threadid;
@@ -149,7 +150,7 @@ tcb_ptr getCurrentControlBlock_Safe() {
   tcb_ptr currentControlBlock = NULL;
   sigprocmask(SIG_BLOCK,&signalMask,NULL);
   currentControlBlock = getCurrentBlock(queue);
-  sigprocmask(SIG_UNBLOCK,&signalMask,null);
+  sigprocmask(SIG_UNBLOCK, &signalMask, NULL);
 
   return currentControlBlock;
 

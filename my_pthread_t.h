@@ -32,6 +32,7 @@ typedef struct threadControlBlock {
   int isMain;
   int priority;
   int t_count;
+  int max_count;
   struct threadControlBlock *next;
   struct blockedThreadList *blockedThreads;
 } tcb, *tcb_ptr;
@@ -44,13 +45,18 @@ typedef struct my_pthread_mutex_t {
   volatile my_pthread_t owner;
 } my_pthread_mutex_t;
 
-/*
+
 typedef struct threadQueue {
   tcb_ptr head;
   tcb_ptr tail;
   long count;
 }*thread_Queue;
-*/
+
+typedef struct heap {
+	int size;
+	int count;
+	tcb_ptr heaparr;
+} *thread_HQ;
 
 typedef struct blockedThreadList {
   tcb_ptr thread;
@@ -71,20 +77,20 @@ typedef struct finishedControlBlockQueue {
 /* Function Declarations: */
 tcb_ptr getControlBlock_Main();
 tcb_ptr getControlBlock();
-tcb_ptr getCurrentBlockByThread(thread_Queue,my_pthread_t);
-tcb_ptr getCurrentBlock(thread_Queue queue);
-int getQueueSize(thread_Queue queue);
-thread_Queue getQueue();
+tcb_ptr getCurrentBlockByThread(thread_HQ, my_pthread_t);
+tcb_ptr getCurrentBlock(thread_HQ);
+//int getQueueSize(thread_HQ);
+//thread_HQ getQueue();
 void freeControlBlock(tcb_ptr);
-int next(thread_Queue);
+//int next(thread_Queue);
 int enqueueToCompletedList(finished_Queue,finishedThread_ptr);
 finishedThread_ptr getFinishedThread(finished_Queue,my_pthread_t,int);
 blockedThreadList_ptr getBlockedThreadList();
 int addToBlockedThreadList(tcb_ptr,tcb_ptr);
 finishedThread_ptr getCompletedThread();
 finished_Queue getFinishedQueue();
-int enqueue(thread_Queue queue,tcb_ptr tcb);
-int dequeue(thread_Queue queue);
+//int enqueue(thread_Queue queue,tcb_ptr tcb);
+//int dequeue(thread_Queue queue);
 void threadCompleted();
 ucontext_t getCommonContext();
 ///////////////////////////////

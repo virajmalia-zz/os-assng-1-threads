@@ -6,12 +6,6 @@
 
 #include "my_pthread_t.h"
 
-typedef struct heap {
-	int size;
-	int count;
-	tcb_ptr heaparr;
-} *thread_HQ;
-
 int size, count;
 int initial_size = 4;
 
@@ -28,16 +22,17 @@ thread_HQ heap_init(){
 }
 
 void max_heapify(tcb_ptr data, int loc, int count) {
-	int left, right, largest, temp;
+	int left, right, largest;
+    tcb temp;
 	left = 2*(loc) + 1;
 	right = left + 1;
 	largest = loc;
 
 
-	if ( left <= count && data[left]->priority > data[largest]->priority ) {
+	if ( left <= count && data[left].priority > data[largest].priority ) {
 		largest = left;
 	}
-	if ( right <= count && data[right]->priority > data[largest]->priority ) {
+	if ( right <= count && data[right].priority > data[largest].priority ) {
 		largest = right;
 	}
 
@@ -65,16 +60,16 @@ void heap_push(thread_HQ h, tcb_ptr value){
  	// Find out where to put the element and put it
 	for(;index; index = parent){
 		parent = (index - 1) / 2;
-		if( h->heaparr[parent]->priority >= value->priority )
+		if( h->heaparr[parent].priority >= value->priority )
             break;
 		h->heaparr[index] = h->heaparr[parent];
 	}
-	h->heaparr[index] = value;
+	h->heaparr[index] = *value;
 }
 
 tcb_ptr heap_pop(thread_HQ h){
 	tcb_ptr removed;
-	tcb_ptr temp = h->heaparr[--h->count];
+	tcb_ptr temp = &(h->heaparr[--h->count]);
 
 
 	if ((h->count <= (h->size + 2)) && (h->size > initial_size))
@@ -84,20 +79,20 @@ tcb_ptr heap_pop(thread_HQ h){
 		if (!h->heaparr)
             exit(-1); // Exit if the memory allocation fails
 	}
- 	removed = h->heaparr[0];
- 	h->heaparr[0] = temp;
+ 	removed = &(h->heaparr[0]);
+ 	h->heaparr[0] = *temp;
  	max_heapify(h->heaparr, 0, h->count);
  	return removed;
 }
 
 tcb_ptr heap_peek(thread_HQ h){
-    return h->heaparr[0];
+    return &(h->heaparr[0]);
 }
-
+/*
 bool isEmpty(thread_HQ h){
     return h->size == 0 || h->count == 0;
 }
-
+*/
 int getQSize(thread_HQ h){
     return h->count;
 }
@@ -106,12 +101,12 @@ tcb_ptr getCurrentBlock(thread_HQ queue){
 
   if(queue !=NULL && queue->heaparr != NULL) {
     printf("\n Returning CurrentBlock\n");
-    return queue->heaparr[0];
+    return &(queue->heaparr[0]);
   }
   return NULL;
 }
 
-tcb_ptr getCurrentBlockByThread(thread_HQ queue,my_pthread_t threadid) {
+tcb_ptr getCurrentBlockByThread(thread_HQ queue, my_pthread_t threadid) {
   tcb_ptr headBlock = getCurrentBlock(queue);
   //if this is the required node
   if(headBlock!=NULL && headBlock->thread_id == threadid)
@@ -150,6 +145,7 @@ tcb_ptr getControlBlock_Main(){
   controlBlock->isMain =1 ;
   controlBlock->priority = 4;
   controlBlock->t_count = 0;
+  controlBlock->max_count = 1;
   controlBlock->next = NULL ;
 
   return controlBlock;
@@ -257,24 +253,6 @@ finished_Queue getFinishedQueue() {
 
 /******* Depricated functions ***********/
 
-int next(thread_Queue queue){
-
-  if(queue!= NULL) {
-    tcb_ptr current = queue -> head;
-    if(current != NULL) {
-      queue->tail = current;
-      queue->head=current->next;
-    }
-  }
-  printf("\n Returning from next");
-  return 0;
-}
-
-int getQueueSize(thread_Queue queue) {
-
-  return queue->count;
-}
-
 thread_Queue getQueue() {
 
   thread_Queue queue = (thread_Queue)malloc(sizeof(struct threadQueue));
@@ -282,7 +260,7 @@ thread_Queue getQueue() {
   queue->head=queue->tail= NULL;
   return queue;
 }
-
+/*
 int enqueue(thread_Queue queue,tcb_ptr tcb) {
 
   //check if queue or tcb is null
@@ -337,3 +315,4 @@ int dequeue(thread_Queue queue) {
   }
   return 0;
 }
+*/

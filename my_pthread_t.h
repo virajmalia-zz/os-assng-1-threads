@@ -4,7 +4,7 @@
 
 // name:
 // username of iLab:
-// iLab Server: 
+// iLab Server:
 #ifndef MY_PTHREAD_T_H
 #define MY_PTHREAD_T_H
 
@@ -30,9 +30,11 @@ typedef struct threadControlBlock {
   int isExecuted;
   int isBlocked;
   int isMain;
+  int priority;
+  int t_count;
   struct threadControlBlock *next;
   struct blockedThreadList *blockedThreads;
-} tcb, *tcb_ptr; 
+} tcb, *tcb_ptr;
 
 /* mutex struct definition */
 typedef struct my_pthread_mutex_t {

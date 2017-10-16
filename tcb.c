@@ -13,6 +13,8 @@ tcb_ptr getControlBlock_Main(){
   controlBlock->isBlocked =0;
   controlBlock->isExecuted =0;
   controlBlock->isMain =1 ;
+  controlBlock->priority = 0;
+  controlBlock->t_count = 0;
   controlBlock->next = NULL ;
 
   return controlBlock;
@@ -28,8 +30,8 @@ tcb_ptr getControlBlock(){
   controlBlock->isActive =0;
   controlBlock->isBlocked =0;
   controlBlock->isExecuted =0;
-  controlBlock->isMain =0 ;
-  controlBlock->next = NULL ;
+  controlBlock->isMain =0;
+  controlBlock->next = NULL;
 
   return controlBlock;
 

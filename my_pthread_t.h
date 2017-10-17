@@ -4,12 +4,13 @@
 
 // name:
 // username of iLab:
-// iLab Server: 
+// iLab Server:
 #ifndef MY_PTHREAD_T_H
 #define MY_PTHREAD_T_H
 
 #define _GNU_SOURCE
 
+#define USE_MY_PTHREAD 1
 /* include lib header files that you need here: */
 #include <unistd.h>
 #include <sys/syscall.h>
@@ -17,6 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ucontext.h>
+
 #define STACKSIZE 8 * 1024
 #define MAXTHREADS 20
 
@@ -30,9 +32,12 @@ typedef struct threadControlBlock {
   int isExecuted;
   int isBlocked;
   int isMain;
+  int priority;
+  int t_count;
+  int max_count;
   struct threadControlBlock *next;
   struct blockedThreadList *blockedThreads;
-} tcb, *tcb_ptr; 
+} tcb, *tcb_ptr;
 
 /* mutex struct definition */
 typedef struct my_pthread_mutex_t {
@@ -42,14 +47,17 @@ typedef struct my_pthread_mutex_t {
   volatile my_pthread_t owner;
 } my_pthread_mutex_t;
 
-/* define your data structures here: */
-
-// Feel free to add your own auxiliary data structures
 typedef struct threadQueue {
   tcb_ptr head;
   tcb_ptr tail;
   long count;
 }*thread_Queue;
+
+typedef struct heap {
+	int size;
+	int count;
+	tcb_ptr heaparr;
+} *thread_HQ;
 
 typedef struct blockedThreadList {
   tcb_ptr thread;
@@ -66,27 +74,6 @@ typedef struct finishedControlBlockQueue {
   struct finishedThread *thread;
   long count;
 }*finished_Queue;
-
-tcb_ptr getControlBlock_Main();
-tcb_ptr getControlBlock();
-tcb_ptr getCurrentBlockByThread(thread_Queue,my_pthread_t);
-tcb_ptr getCurrentBlock(thread_Queue queue);
-int getQueueSize(thread_Queue queue);
-thread_Queue getQueue();
-void freeControlBlock(tcb_ptr);
-int next(thread_Queue);
-int enqueueToCompletedList(finished_Queue,finishedThread_ptr);
-finishedThread_ptr getFinishedThread(finished_Queue,my_pthread_t,int);
-blockedThreadList_ptr getBlockedThreadList();
-int addToBlockedThreadList(tcb_ptr,tcb_ptr);
-finishedThread_ptr getCompletedThread();
-finished_Queue getFinishedQueue();
-int enqueue(thread_Queue queue,tcb_ptr tcb);
-int dequeue(thread_Queue queue);
-void threadCompleted();
-ucontext_t getCommonContext();
-
-/* Function Declarations: */
 
 // init process
 void my_pthread_init(long period);
@@ -114,5 +101,17 @@ int my_pthread_mutex_unlock(my_pthread_mutex_t *mutex);
 
 /* destroy the mutex */
 int my_pthread_mutex_destroy(my_pthread_mutex_t *mutex);
+
+#ifdef USE_MY_PTHREAD
+#define pthread_t my_pthread_t
+#define pthread_mutex_t my_pthread_mutex_t
+#define pthread_create my_pthread_create
+#define pthread_exit my_pthread_exit
+#define pthread_join my_pthread_join
+#define pthread_mutex_init my_pthread_mutex_init
+#define pthread_mutex_lock my_pthread_mutex_lock
+#define pthread_mutex_unlock my_pthread_mutex_unlock
+#define pthread_mutex_destroy my_pthread_mutex_destroy
+#endif
 
 #endif

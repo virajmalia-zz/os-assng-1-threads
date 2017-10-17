@@ -1,0 +1,5 @@
+# Ignore Object files
+*.o
+
+# Ignore binaries
+*.a

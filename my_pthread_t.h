@@ -10,6 +10,7 @@
 
 #define _GNU_SOURCE
 
+#define USE_MY_PTHREAD 1
 /* include lib header files that you need here: */
 #include <unistd.h>
 #include <sys/syscall.h>
@@ -17,6 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ucontext.h>
+
 #define STACKSIZE 8 * 1024
 #define MAXTHREADS 20
 
@@ -44,7 +46,6 @@ typedef struct my_pthread_mutex_t {
   int count;
   volatile my_pthread_t owner;
 } my_pthread_mutex_t;
-
 
 typedef struct threadQueue {
   tcb_ptr head;
@@ -74,32 +75,6 @@ typedef struct finishedControlBlockQueue {
   long count;
 }*finished_Queue;
 
-/* Function Declarations: */
-tcb_ptr getControlBlock_Main();
-tcb_ptr getControlBlock();
-tcb_ptr getCurrentBlockByThread(thread_HQ, my_pthread_t);
-tcb_ptr getCurrentBlock(thread_HQ);
-//int getQueueSize(thread_HQ);
-//thread_HQ getQueue();
-void freeControlBlock(tcb_ptr);
-//int next(thread_Queue);
-int enqueueToCompletedList(finished_Queue,finishedThread_ptr);
-finishedThread_ptr getFinishedThread(finished_Queue,my_pthread_t,int);
-blockedThreadList_ptr getBlockedThreadList();
-int addToBlockedThreadList(tcb_ptr,tcb_ptr);
-finishedThread_ptr getCompletedThread();
-finished_Queue getFinishedQueue();
-//int enqueue(thread_Queue queue,tcb_ptr tcb);
-//int dequeue(thread_Queue queue);
-void threadCompleted();
-ucontext_t getCommonContext();
-///////////////////////////////
-thread_HQ heap_init();
-void heap_push(thread_HQ, tcb_ptr);
-tcb_ptr heap_pop(thread_HQ);
-tcb_ptr heap_peek(thread_HQ);
-int getQSize(thread_HQ);
-
 // init process
 void my_pthread_init(long period);
 
@@ -126,5 +101,17 @@ int my_pthread_mutex_unlock(my_pthread_mutex_t *mutex);
 
 /* destroy the mutex */
 int my_pthread_mutex_destroy(my_pthread_mutex_t *mutex);
+
+#ifdef USE_MY_PTHREAD
+#define pthread_t my_pthread_t
+#define pthread_mutex_t my_pthread_mutex_t
+#define pthread_create my_pthread_create
+#define pthread_exit my_pthread_exit
+#define pthread_join my_pthread_join
+#define pthread_mutex_init my_pthread_mutex_init
+#define pthread_mutex_lock my_pthread_mutex_lock
+#define pthread_mutex_unlock my_pthread_mutex_unlock
+#define pthread_mutex_destroy my_pthread_mutex_destroy
+#endif
 
 #endif

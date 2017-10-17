@@ -50,7 +50,7 @@ thread_HQ heap_init(){
     thread_HQ h;
 	h->count = 0;
 	h->size = MAXTHREADS;
-	h->heaparr = (tcb_ptr) malloc(sizeof(tcb_ptr) * MAXTHREADS);
+	//h->heaparr = (tcb_ptr) malloc(sizeof(tcb_ptr) * MAXTHREADS);
 	if(!h->heaparr) {
 		printf("Error allocatinga memory...\n");
 		exit(-1);
@@ -93,12 +93,12 @@ void heap_push(thread_HQ h, tcb_ptr value){
             exit(-1); // Exit if the memory allocation fails
 	}
     */
- 	index = h->count++; // First insert at last of array
+ 	index = h->count; // First insert at last of array
 
  	// Find out where to put the element and put it
 	for(;index; index = parent){
 		parent = (index - 1) / 2;
-		if( h->heaparr[parent].priority >= value->priority )
+		if( h->heaparr[parent]->priority >= value->priority )
             break;
 		h->heaparr[index] = h->heaparr[parent];
 	}
@@ -109,7 +109,8 @@ void heap_push(thread_HQ h, tcb_ptr value){
 tcb_ptr heap_pop(thread_HQ h){
     sigprocmask(SIG_BLOCK, &signalMask, NULL);
 	tcb_ptr removed;
-	tcb_ptr temp = h->heaparr[--h->count];
+    h->count--;
+	tcb_ptr temp = h->heaparr[h->count];
 
     /*
 	if ((h->count <= (h->size + 2)) && (h->size > initial_size))
@@ -120,9 +121,11 @@ tcb_ptr heap_pop(thread_HQ h){
             exit(-1); // Exit if the memory allocation fails
 	}
     */
- 	removed = h->heaparr[0];
+    // Swap last and
+    removed = h->heaparr[0];
  	h->heaparr[0] = temp;
  	max_heapify(h->heaparr[0], 0, h->count);
+
     sigprocmask(SIG_UNBLOCK, &signalMask, NULL);
  	return removed;
 }
@@ -151,7 +154,7 @@ tcb_ptr getCurrentBlock(thread_HQ queue){
 
   if(queue != NULL) {
       printf("In getCurrentBlock\n");
-    printf("%d\n", queue->heaparr[0].thread_id);  // Seg fault here
+    printf("%d\n", queue->heaparr[0]->thread_id);  // Seg fault here
     return queue->heaparr[0];
   }
   printf("Returning NULL");
@@ -159,9 +162,10 @@ tcb_ptr getCurrentBlock(thread_HQ queue){
 }
 
 tcb_ptr getCurrentBlockByThread(thread_HQ queue, my_pthread_t threadid) {
-    printf("In getCurrentBlockByThread\n");
-  tcb_ptr headBlock = getCurrentBlock(queue);
-  printf("Before block by thread");
+    printf("In getCurrentBlockByThread: %d\n", threadid);
+    tcb_ptr headBlock = getCurrentBlock(queue);
+
+    printf("headBlock: %d", headBlock->thread_id);
   //if this is the required node
   if(headBlock!=NULL && headBlock->thread_id == threadid){
       printf("headblock NULL");
@@ -169,19 +173,23 @@ tcb_ptr getCurrentBlockByThread(thread_HQ queue, my_pthread_t threadid) {
 }
 
   tcb_ptr dummyThread=NULL;
+
   if(headBlock!=NULL){
       printf("headblock not NULL");
     dummyThread = headBlock->next;
 }
 
+    printf("Dummy thread: %d\n", dummyThread->thread_id);
   while(headBlock != dummyThread) {
+
     if(dummyThread->thread_id == threadid){
         printf("dummyThread");
       return dummyThread;
-  }
+    }
 
     dummyThread = dummyThread->next;
   }
+
   return NULL;
 }
 

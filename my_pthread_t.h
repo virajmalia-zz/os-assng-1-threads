@@ -56,7 +56,7 @@ typedef struct threadQueue {
 typedef struct heap {
 	int size;
 	int count;
-	tcb_ptr heaparr;
+	tcb_ptr heaparr[MAXTHREADS];
 } *thread_HQ;
 
 typedef struct blockedThreadList {

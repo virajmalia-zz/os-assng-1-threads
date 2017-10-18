@@ -40,7 +40,7 @@ long millisec;
 clock_t threadBegin[22];
 clock_t threadEnd[22];
 //timer array - size = maz thread + 2
-extern double threadTime[22];
+double threadTime[22];
 clock_t begin;
 clock_t end;
 

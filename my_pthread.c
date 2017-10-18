@@ -37,6 +37,12 @@ thread_HQ queue = NULL;
 finished_Queue finishedQueue = NULL;
 tcb_ptr getCurrentControlBlock_Safe();
 long millisec;
+clock_t threadBegin[22];
+clock_t threadEnd[22];
+//timer array - size = maz thread + 2
+extern double threadTime[22];
+clock_t begin;
+clock_t end;
 
 /********************************
 *
@@ -513,6 +519,7 @@ int my_pthread_create(my_pthread_t * thread, pthread_attr_t * attr, void *(*func
     makecontext(&(threadCB->thread_context),(void (*)(void))&helper,2,function,arg);
 
     printf("Thread is created %d\n", *thread);
+    threadBegin[*thread] = clock();
     heap_push(queue, threadCB);
     printf("Pushed\n");
     sigprocmask(SIG_UNBLOCK, &signalMask, NULL);
@@ -582,6 +589,7 @@ int my_pthread_join(my_pthread_t thread, void **value_ptr) {
   sigprocmask(SIG_BLOCK,&signalMask,NULL);
   tcb_ptr callingThread = getCurrentBlock(queue);
   tcb_ptr joinThread = getCurrentBlockByThread(queue, thread); //How do you handle multiple queues
+  // *thread = joinThread->thread_id;
 
   //check if callingthread is blocking on itself or is null
   if(callingThread == NULL || callingThread == joinThread) {
@@ -598,6 +606,8 @@ int my_pthread_join(my_pthread_t thread, void **value_ptr) {
       if(value_ptr)
 	*value_ptr =*(finishedThread->returnValue);
       free(finishedThread);
+      threadEnd[joinThread->thread_id]=clock();
+      threadTime[joinThread->thread_id] = (double) (threadEnd[joinThread->thread_id]-threadBegin[joinThread->thread_id])/CLOCKS_PER_SEC;
       printf("printing join 0");
       return 0;
     }
@@ -623,6 +633,8 @@ int my_pthread_join(my_pthread_t thread, void **value_ptr) {
       if(value_ptr)
 	*value_ptr=*(finishedThread->returnValue);
       free(finishedThread);
+      threadEnd[joinThread->thread_id]=clock();
+      threadTime[joinThread->thread_id] = (double) (threadEnd[joinThread->thread_id]-threadBegin[joinThread->thread_id])/CLOCKS_PER_SEC;
     }
     return 0;
     }
@@ -631,6 +643,10 @@ int my_pthread_join(my_pthread_t thread, void **value_ptr) {
     return -1;
   }
 };
+
+double * get_thread_time() {
+  return threadTime;
+}
 
 /* initial the mutex lock */
 int my_pthread_mutex_init(my_pthread_mutex_t *mutex, const pthread_mutexattr_t *mutexattr) {

@@ -37,10 +37,10 @@ thread_HQ queue = NULL;
 finished_Queue finishedQueue = NULL;
 tcb_ptr getCurrentControlBlock_Safe();
 long millisec;
-clock_t threadBegin[22];
-clock_t threadEnd[22];
+clock_t threadBegin[MAXTHREADS+2];
+clock_t threadEnd[MAXTHREADS+2];
 //timer array - size = maz thread + 2
-double threadTime[22];
+double threadTime[MAXTHREADS+2];
 clock_t begin;
 clock_t end;
 

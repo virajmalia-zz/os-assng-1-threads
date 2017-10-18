@@ -3,6 +3,3 @@
 
 # Ignore binaries
 *.a
-
-#Ignore Benchmark records
-Benchmark/record/*

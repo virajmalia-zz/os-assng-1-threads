@@ -13,6 +13,7 @@
 #include <signal.h>
 #include <string.h>
 #include <stdbool.h>
+#include <time.h>
 
 typedef struct {
   my_pthread_t thread_id;
@@ -50,11 +51,6 @@ thread_HQ heap_init(){
     thread_HQ h;
 	h->count = 0;
 	h->size = MAXTHREADS;
-	//h->heaparr = (tcb_ptr) malloc(sizeof(tcb_ptr) * MAXTHREADS);
-	if(!h->heaparr) {
-		printf("Error allocatinga memory...\n");
-		exit(-1);
-	}
     return h;
 }
 
@@ -95,14 +91,32 @@ void heap_push(thread_HQ h, tcb_ptr value){
     */
  	index = h->count; // First insert at last of array
 
- 	// Find out where to put the element and put it
-	for(;index; index = parent){
-		parent = (index - 1) / 2;
-		if( h->heaparr[parent]->priority >= value->priority )
-            break;
-		h->heaparr[index] = h->heaparr[parent];
-	}
-	h->heaparr[index] = value;
+        // Find out where to put the element and put it
+        while(index > 0){
+            parent = (index - 1) / 2;
+            if( h->heaparr[parent]->priority > value->priority )
+                break;
+            if( h->heaparr[parent]->priority == value->priority ){
+                // If priorities are same, check for timestamp
+                clock_t now = clock();
+                clock_t value_age = (now - value->start_time) / CLOCKS_PER_SEC;
+                clock_t parent_age = (now - h->heaparr[parent]->start_time) / CLOCKS_PER_SEC;
+                //printf("value_age:%Lf\t parent_age:%Lf\n", (long double)value_age, (long double)parent_age );
+                if( parent_age < value_age ){
+                    // Insert value at this index
+                    break;
+                }
+                // else keep moving value up the heap
+            }
+
+            h->heaparr[index] = h->heaparr[parent];
+            index = parent;
+        }
+
+        printf("Pushing:%d\n", value->thread_id);
+        //copyThreadContext(h->heaparr[index], value);
+    h->heaparr[index] = value;
+    h->count++;
     sigprocmask(SIG_UNBLOCK, &signalMask, NULL);
 }
 
@@ -110,20 +124,11 @@ tcb_ptr heap_pop(thread_HQ h){
     sigprocmask(SIG_BLOCK, &signalMask, NULL);
 	tcb_ptr removed;
     h->count--;
-	tcb_ptr temp = h->heaparr[h->count];
+	tcb_ptr last = h->heaparr[h->count];
 
-    /*
-	if ((h->count <= (h->size + 2)) && (h->size > initial_size))
-	{
-		h->size -= 1;
-		h->heaparr = realloc(h->heaparr, sizeof(tcb_ptr) * h->size);
-		if (!h->heaparr)
-            exit(-1); // Exit if the memory allocation fails
-	}
-    */
     // Swap last and
     removed = h->heaparr[0];
- 	h->heaparr[0] = temp;
+ 	h->heaparr[0] = last;
  	max_heapify(h->heaparr[0], 0, h->count);
 
     sigprocmask(SIG_UNBLOCK, &signalMask, NULL);
@@ -154,8 +159,8 @@ tcb_ptr getCurrentBlock(thread_HQ queue){
 
   if(queue != NULL) {
       printf("In getCurrentBlock\n");
-    printf("%d\n", queue->heaparr[0]->thread_id);  // Seg fault here
-    return queue->heaparr[0];
+    printf("%d\n", queue->heaparr[1]->thread_id);
+    return queue->heaparr[1];    // Seg fault here
   }
   printf("Returning NULL");
   return NULL;
@@ -165,25 +170,25 @@ tcb_ptr getCurrentBlockByThread(thread_HQ queue, my_pthread_t threadid) {
     printf("In getCurrentBlockByThread: %d\n", threadid);
     tcb_ptr headBlock = getCurrentBlock(queue);
 
-    printf("headBlock: %d", headBlock->thread_id);
+    printf("headBlock: %d\n", headBlock->thread_id);
   //if this is the required node
   if(headBlock!=NULL && headBlock->thread_id == threadid){
-      printf("headblock NULL");
+      printf("headblock NULL\n");
     return headBlock;
-}
+    }
 
   tcb_ptr dummyThread=NULL;
 
   if(headBlock!=NULL){
-      printf("headblock not NULL");
+      printf("headblock not NULL\n");
     dummyThread = headBlock->next;
-}
+    }
 
     printf("Dummy thread: %d\n", dummyThread->thread_id);
   while(headBlock != dummyThread) {
 
     if(dummyThread->thread_id == threadid){
-        printf("dummyThread");
+        printf("dummyThread\n");
       return dummyThread;
     }
 
@@ -355,10 +360,10 @@ void setMaxCount(tcb_ptr cc){
             cc->max_count = 3;
             break;
         case 2:
-            cc->max_count = 7;
+            cc->max_count = 6;
             break;
         case 1:
-            cc->max_count = 15;
+            cc->max_count = 10;
             break;
     }
 }
@@ -506,7 +511,6 @@ int my_pthread_create(my_pthread_t * thread, pthread_attr_t * attr, void *(*func
     threadCB->t_count = 0;
     threadCB->max_count = 1;
     threadCB->thread_context.uc_link = &common_context;
-    //temp =rand();
     threadCB->thread_id= ++threadid;
     *thread = threadCB->thread_id;
 
@@ -515,6 +519,8 @@ int my_pthread_create(my_pthread_t * thread, pthread_attr_t * attr, void *(*func
     printf("Thread is created %d\n", *thread);
     heap_push(queue, threadCB);
     printf("Pushed\n");
+    // start timer here
+    threadCB->start_time = clock();
     sigprocmask(SIG_UNBLOCK, &signalMask, NULL);
     sigemptyset(&(threadCB->thread_context.uc_sigmask));
     return 0;

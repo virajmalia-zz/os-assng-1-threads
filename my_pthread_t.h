@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
+#include <sys/time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <ucontext.h>
@@ -25,7 +26,6 @@
 typedef uint my_pthread_t;
 
 typedef struct threadControlBlock {
-	/* add something here */
   my_pthread_t thread_id;
   ucontext_t thread_context;
   int isActive;
@@ -35,13 +35,13 @@ typedef struct threadControlBlock {
   int priority;
   int t_count;
   int max_count;
+  clock_t start_time;
   struct threadControlBlock *next;
   struct blockedThreadList *blockedThreads;
 } tcb, *tcb_ptr;
 
 /* mutex struct definition */
 typedef struct my_pthread_mutex_t {
-	/* add something here */
   int lock;
   int count;
   volatile my_pthread_t owner;

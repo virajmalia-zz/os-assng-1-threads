@@ -645,7 +645,7 @@ int my_pthread_join(my_pthread_t thread, void **value_ptr) {
 };
 
 double * get_thread_time() {
-  return threadTime;
+  return &threadTime;
 }
 
 /* initial the mutex lock */

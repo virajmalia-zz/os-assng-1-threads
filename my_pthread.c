@@ -13,6 +13,7 @@
 #include <signal.h>
 #include <string.h>
 #include <stdbool.h>
+#include <time.h>
 
 typedef struct {
   my_pthread_t thread_id;
@@ -37,6 +38,13 @@ thread_HQ queue = NULL;
 finished_Queue finishedQueue = NULL;
 tcb_ptr getCurrentControlBlock_Safe();
 long millisec;
+clock_t threadBegin[MAXTHREADS+2];
+clock_t threadEnd[MAXTHREADS+2];
+//timer array - size = maz thread + 2
+double threadTime[MAXTHREADS+2];
+clock_t begin;
+clock_t end;
+tcb_ptr mainThread;
 
 /********************************
 *
@@ -50,11 +58,8 @@ thread_HQ heap_init(){
     thread_HQ h;
 	h->count = 0;
 	h->size = MAXTHREADS;
-	//h->heaparr = (tcb_ptr) malloc(sizeof(tcb_ptr) * MAXTHREADS);
-	if(!h->heaparr) {
-		printf("Error allocatinga memory...\n");
-		exit(-1);
-	}
+    //for(int i=0; i<MAXTHREADS; i++)
+    //    h->heaparr[i] = NULL;
     return h;
 }
 
@@ -84,25 +89,41 @@ void max_heapify(tcb_ptr data, int loc, int count) {
 void heap_push(thread_HQ h, tcb_ptr value){
     sigprocmask(SIG_BLOCK, &signalMask, NULL);
 	int index, parent;
-    /*
-	// Resize the heap if it is too small to hold all the data
-	if (h->count == h->size){
-		h->size += h->size;
-		h->heaparr = realloc(h->heaparr, sizeof(tcb_ptr) * h->size);
-		if (!h->heaparr)
-            exit(-1); // Exit if the memory allocation fails
-	}
-    */
+
  	index = h->count; // First insert at last of array
 
- 	// Find out where to put the element and put it
-	for(;index; index = parent){
-		parent = (index - 1) / 2;
-		if( h->heaparr[parent]->priority >= value->priority )
-            break;
-		h->heaparr[index] = h->heaparr[parent];
-	}
-	h->heaparr[index] = value;
+        // Find out where to put the element and put it
+        while(index > 0){
+            parent = (index - 1) / 2;
+            if( h->heaparr[parent]->priority > value->priority )
+                break;
+            if( h->heaparr[parent]->priority == value->priority ){
+                // If priorities are same, check for timestamp
+                clock_t now = clock();
+                clock_t value_age = (now - value->start_time) / CLOCKS_PER_SEC;
+                clock_t parent_age = (now - h->heaparr[parent]->start_time) / CLOCKS_PER_SEC;
+                //printf("value_age:%Lf\t parent_age:%Lf\n", (long double)value_age, (long double)parent_age );
+                if( parent_age < value_age ){
+                    // Insert value at this index
+                    break;
+                }
+                // else keep moving value up the heap
+            }
+
+            h->heaparr[index] = h->heaparr[parent];
+            index = parent;
+        }
+
+        printf("Pushing:%d\n", value->thread_id);
+        //copyThreadContext(h->heaparr[index], value);
+    h->heaparr[index] = value;
+    h->count++;
+
+    int i;
+    for(i=0; i<h->count-1; i++){
+        h->heaparr[i]->next = h->heaparr[i+1];
+    }
+    h->heaparr[i]->next = NULL;
     sigprocmask(SIG_UNBLOCK, &signalMask, NULL);
 }
 
@@ -110,24 +131,28 @@ tcb_ptr heap_pop(thread_HQ h){
     sigprocmask(SIG_BLOCK, &signalMask, NULL);
 	tcb_ptr removed;
     h->count--;
-	tcb_ptr temp = h->heaparr[h->count];
+	tcb_ptr last = h->heaparr[h->count];
 
-    /*
-	if ((h->count <= (h->size + 2)) && (h->size > initial_size))
-	{
-		h->size -= 1;
-		h->heaparr = realloc(h->heaparr, sizeof(tcb_ptr) * h->size);
-		if (!h->heaparr)
-            exit(-1); // Exit if the memory allocation fails
-	}
-    */
     // Swap last and
     removed = h->heaparr[0];
- 	h->heaparr[0] = temp;
+ 	h->heaparr[0] = last;
  	max_heapify(h->heaparr[0], 0, h->count);
 
     sigprocmask(SIG_UNBLOCK, &signalMask, NULL);
  	return removed;
+}
+
+void removeFromHeap(my_pthread_t threadId){
+    for(int i=0; i<queue->count; i++){
+        if( queue->heaparr[i]->thread_id == threadId ){
+            int j = i;
+            while(queue->heaparr[j]->next != NULL){
+                queue->heaparr[j] = queue->heaparr[j+1]
+                j++;
+            }
+            queue->count--;
+        }
+    }
 }
 
 tcb_ptr heap_peek(thread_HQ h){
@@ -153,37 +178,37 @@ void heap_delete(thread_HQ h){
 tcb_ptr getCurrentBlock(thread_HQ queue){
 
   if(queue != NULL) {
-      printf("In getCurrentBlock\n");
-    printf("%d\n", queue->heaparr[0]->thread_id);  // Seg fault here
-    return queue->heaparr[0];
+      //printf("In getCurrentBlock\n");
+    //printf("%d\n", queue->heaparr[0]->thread_id);
+    return queue->heaparr[0];    // Seg fault here
   }
-  printf("Returning NULL");
+  //printf("Returning NULL");
   return NULL;
 }
 
 tcb_ptr getCurrentBlockByThread(thread_HQ queue, my_pthread_t threadid) {
-    printf("In getCurrentBlockByThread: %d\n", threadid);
+    //printf("In getCurrentBlockByThread: %d\n", threadid);
     tcb_ptr headBlock = getCurrentBlock(queue);
 
-    printf("headBlock: %d", headBlock->thread_id);
+    //printf("headBlock: %d\n", headBlock->thread_id);
   //if this is the required node
   if(headBlock!=NULL && headBlock->thread_id == threadid){
-      printf("headblock NULL");
+      //printf("headblock NULL\n");
     return headBlock;
-}
+    }
 
   tcb_ptr dummyThread=NULL;
 
   if(headBlock!=NULL){
-      printf("headblock not NULL");
+      //printf("headblock not NULL\n");
     dummyThread = headBlock->next;
-}
+    }
 
-    printf("Dummy thread: %d\n", dummyThread->thread_id);
+    //printf("Dummy thread: %d\n", dummyThread->thread_id);
   while(headBlock != dummyThread) {
 
     if(dummyThread->thread_id == threadid){
-        printf("dummyThread");
+        //printf("dummyThread:%d\n", dummyThread->thread_id);
       return dummyThread;
     }
 
@@ -243,12 +268,17 @@ int enqueueToCompletedList(finished_Queue queue,finishedThread_ptr finishedThrea
 finishedThread_ptr getFinishedThread(finished_Queue queue,my_pthread_t thread_id,int flag) {
 
   if(queue!=NULL) {
-    finishedThread_ptr thread= queue->thread;
+    finishedThread_ptr thread = queue->thread;
     finishedThread_ptr previous_thread = NULL;
-    while((thread!=NULL)&& (thread->thread_id!=thread_id)) {
+
+    while(thread!=NULL) {
+        if(thread->thread_id==thread_id){
+            break;
+        }
       previous_thread =thread;
       thread = thread ->next;
     }
+
     if(flag && thread!=NULL) {
       if(previous_thread == NULL)
 	     queue->thread  = thread->next;
@@ -321,6 +351,7 @@ void threadCompleted() {
 
   printf("\n Thread completed : %d",currentNode->thread_id );
   currentNode->isExecuted=1;
+  removeFromHeap(currentNode->thread_id);
   raise(SIGVTALRM);
 }
 
@@ -337,6 +368,42 @@ ucontext_t getCommonContext() {
     contextAlreadySet = 1;
   }
 }
+
+void *helper(void *(*function)(void*), void *arg){
+
+  void *returnValue;
+  tcb_ptr currentThread = getCurrentControlBlock_Safe();
+  //printf("In Helper");
+  returnValue = (*function)(arg);
+  sigprocmask(SIG_BLOCK,&signalMask,NULL);
+  finishedThread_ptr finishedThread = getCompletedThread();
+  if(finishedThread != NULL) {
+    *(finishedThread->returnValue) = returnValue;
+    finishedThread->thread_id = currentThread->thread_id;
+    enqueueToCompletedList(finishedQueue,finishedThread);
+  }
+  sigprocmask(SIG_UNBLOCK,&signalMask,NULL);
+
+  return returnValue;
+  // set this value to the completed nodes return value
+}
+
+tcb_ptr getCurrentControlBlock_Safe() {
+
+  tcb_ptr currentControlBlock = NULL;
+  sigprocmask(SIG_BLOCK,&signalMask,NULL);
+  currentControlBlock = getCurrentBlock(queue);
+  sigprocmask(SIG_UNBLOCK, &signalMask, NULL);
+
+  return currentControlBlock;
+
+}
+
+/*
+double * get_thread_time() {
+  return &threadTime;
+}
+*/
 
 /******* End Context Functions *******/
 
@@ -355,10 +422,10 @@ void setMaxCount(tcb_ptr cc){
             cc->max_count = 3;
             break;
         case 2:
-            cc->max_count = 7;
+            cc->max_count = 6;
             break;
         case 1:
-            cc->max_count = 15;
+            cc->max_count = 10;
             break;
     }
 }
@@ -468,13 +535,13 @@ void my_pthread_init(long period){
   finishedQueue = getFinishedQueue();
   queue = heap_init();
   millisec = period;
-  tcb_ptr mainThread = getControlBlock_Main();
+  mainThread = getControlBlock_Main();
   //getcontext(&(MainThread->thread_context));
   printf("in init \n");
   getCommonContext();
   mainThread->thread_context.uc_link = &common_context;
   mainThread->thread_id = threadid;
-  heap_push(queue, mainThread);
+  //heap_push(queue, mainThread);
   memset(&scheduler_interrupt_handler, 0, sizeof (scheduler_interrupt_handler));
   scheduler_interrupt_handler.sa_handler= &scheduler;
   sigaction(SIGVTALRM,&scheduler_interrupt_handler,NULL);
@@ -506,15 +573,17 @@ int my_pthread_create(my_pthread_t * thread, pthread_attr_t * attr, void *(*func
     threadCB->t_count = 0;
     threadCB->max_count = 1;
     threadCB->thread_context.uc_link = &common_context;
-    //temp =rand();
     threadCB->thread_id= ++threadid;
     *thread = threadCB->thread_id;
 
     makecontext(&(threadCB->thread_context),(void (*)(void))&helper,2,function,arg);
 
     printf("Thread is created %d\n", *thread);
-    heap_push(queue, threadCB);
+    threadBegin[*thread] = clock();
+    //heap_push(queue, threadCB);
     printf("Pushed\n");
+    // start timer here
+    threadCB->start_time = clock();
     sigprocmask(SIG_UNBLOCK, &signalMask, NULL);
     sigemptyset(&(threadCB->thread_context.uc_sigmask));
     return 0;
@@ -522,36 +591,6 @@ int my_pthread_create(my_pthread_t * thread, pthread_attr_t * attr, void *(*func
   printf("Error: init() function not executed/n");
   return 0;
 };
-
-void *helper(void *(*function)(void*), void *arg){
-
-  void *returnValue;
-  tcb_ptr currentThread = getCurrentControlBlock_Safe();
-  printf("In Helper");
-  returnValue = (*function)(arg);
-  sigprocmask(SIG_BLOCK,&signalMask,NULL);
-  finishedThread_ptr finishedThread = getCompletedThread();
-  if(finishedThread != NULL) {
-    *(finishedThread->returnValue) = returnValue;
-    finishedThread->thread_id = currentThread->thread_id;
-    enqueueToCompletedList(finishedQueue,finishedThread);
-  }
-  sigprocmask(SIG_UNBLOCK,&signalMask,NULL);
-
-  return returnValue;
-  // set this value to the completed nodes return value
-}
-
-tcb_ptr getCurrentControlBlock_Safe() {
-
-  tcb_ptr currentControlBlock = NULL;
-  sigprocmask(SIG_BLOCK,&signalMask,NULL);
-  currentControlBlock = getCurrentBlock(queue);
-  sigprocmask(SIG_UNBLOCK, &signalMask, NULL);
-
-  return currentControlBlock;
-
-}
 
 /* give CPU pocession to other user level threads voluntarily */
 int my_pthread_yield() {
@@ -564,7 +603,7 @@ int my_pthread_yield() {
 void my_pthread_exit(void *value_ptr) {
   printf("\n-----Exit called-----\n");
   sigprocmask(SIG_BLOCK,&signalMask,NULL);
-  tcb_ptr currentThread= getCurrentBlock(queue);    // How to handle multiple queues??
+  tcb_ptr currentThread= getCurrentBlock(queue);
   finishedThread_ptr finishedThread = getCompletedThread();
   if(finishedThread !=NULL && currentThread != NULL) {
     *(finishedThread->returnValue) = value_ptr;
@@ -581,7 +620,8 @@ int my_pthread_join(my_pthread_t thread, void **value_ptr) {
     printf("Joining thread %d\n", thread );
   sigprocmask(SIG_BLOCK,&signalMask,NULL);
   tcb_ptr callingThread = getCurrentBlock(queue);
-  tcb_ptr joinThread = getCurrentBlockByThread(queue, thread); //How do you handle multiple queues
+  tcb_ptr joinThread = getCurrentBlockByThread(queue, thread);
+  //printf("Both threads received\n");
 
   //check if callingthread is blocking on itself or is null
   if(callingThread == NULL || callingThread == joinThread) {
@@ -598,35 +638,55 @@ int my_pthread_join(my_pthread_t thread, void **value_ptr) {
       if(value_ptr)
 	*value_ptr =*(finishedThread->returnValue);
       free(finishedThread);
+      threadEnd[joinThread->thread_id]=clock();
+      threadTime[joinThread->thread_id] = (double) (threadEnd[joinThread->thread_id]-threadBegin[joinThread->thread_id])/CLOCKS_PER_SEC;
       printf("printing join 0");
       return 0;
     }
     else{
         printf("printing join -1");
       return -1;
-  }
+    }
 
   }
 
   //printf("\n Value is %d :",(joinThread->blockedThreads==NULL));
   if(joinThread->blockedThreads == NULL) {
+      //printf("blockedThreads is NULL\n");
     addToBlockedThreadList(joinThread,callingThread);
+    //printf("after addToBlockedThreadList\n");
     int isBlocked=callingThread->isBlocked;
     sigprocmask(SIG_UNBLOCK,&signalMask,NULL);
+
     while(isBlocked){
+        threadCompleted();
+        //printf("Stuck in while loop\n");
       isBlocked=callingThread->isBlocked;
     }
+
+    printf("after while loop\n");
     sigprocmask(SIG_BLOCK,&signalMask,NULL);
     finishedThread_ptr finishedThread = getFinishedThread(finishedQueue,thread,1);
     sigprocmask(SIG_UNBLOCK,&signalMask,NULL);
+    printf("b4 finishedThread\n");
     if(finishedThread != NULL && value_ptr != NULL) {
-      if(value_ptr)
-	*value_ptr=*(finishedThread->returnValue);
+        if(value_ptr)
+	     *value_ptr=*(finishedThread->returnValue);
       free(finishedThread);
+      threadEnd[joinThread->thread_id]=clock();
+      threadTime[joinThread->thread_id] = (double) (threadEnd[joinThread->thread_id]-threadBegin[joinThread->thread_id])/CLOCKS_PER_SEC;
     }
+    // Check for threads remaining in heap
+    if(getQSize(queue) == 0){
+        // Bring back MainThread Context
+
+    }
+
+    printf("Returning from join\n");
     return 0;
     }
   else {
+      printf("Returning from join with -1\n");
     sigprocmask(SIG_UNBLOCK,&signalMask,NULL);
     return -1;
   }
@@ -644,7 +704,7 @@ int my_pthread_mutex_init(my_pthread_mutex_t *mutex, const pthread_mutexattr_t *
 
 /* aquire the mutex lock */
 int my_pthread_mutex_lock(my_pthread_mutex_t *mutex) {
-  printf("Mutex lock called \n");
+  //printf("Mutex lock called \n");
   sigemptyset(&signalMask);
   sigaddset(&signalMask, SIGVTALRM);
   sigprocmask(SIG_BLOCK,&signalMask, NULL);
@@ -674,7 +734,7 @@ int my_pthread_mutex_lock(my_pthread_mutex_t *mutex) {
 
 /* release the mutex lock */
 int my_pthread_mutex_unlock(my_pthread_mutex_t *mutex) {
-  printf("Mutex unlock called \n");
+  //printf("Mutex unlock called \n");
   sigprocmask(SIG_BLOCK,&signalMask,NULL);
   tcb_ptr currentThread = getCurrentBlock(queue);
   if(mutex->owner == currentThread->thread_id) {

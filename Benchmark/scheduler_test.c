@@ -120,12 +120,12 @@ int main()
 
   //set_policy("main");
 
-  pthread_attr_init(&thread_attr);
-  pthread_create(&id[0], &thread_attr, func1, NULL);
-  pthread_create(&id[1], &thread_attr, func2, NULL);
+  my_pthread_attr_init(&thread_attr);
+  my_pthread_create(&id[0], &thread_attr, func1, NULL);
+  my_pthread_create(&id[1], &thread_attr, func2, NULL);
 
-  pthread_join(id[0], NULL);
-  pthread_join(id[1], NULL);
+  my_pthread_join(id[0], NULL);
+  my_pthread_join(id[1], NULL);
 
   return 0;
 }

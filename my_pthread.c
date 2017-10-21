@@ -658,11 +658,11 @@ int my_pthread_join(my_pthread_t thread, void **value_ptr) {
     int isBlocked=callingThread->isBlocked;
     sigprocmask(SIG_UNBLOCK,&signalMask,NULL);
 
-    while(isBlocked){
-        //my_pthread_yield();
+    if(isBlocked){
+        my_pthread_yield();
         //threadCompleted();
         //printf("Stuck in while loop\n");
-      isBlocked=callingThread->isBlocked;
+      // isBlocked=callingThread->isBlocked;
     }
 
     printf("after while loop\n");

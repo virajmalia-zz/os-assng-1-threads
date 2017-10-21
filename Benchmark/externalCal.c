@@ -129,8 +129,8 @@ int main(int argc, char **argv) {
 	for (i = 0; i < thread_num; ++i)
 		pthread_create(&thread[i], NULL, &external_calculate, &counter[i]);
 
-	signal(SIGABRT, sig_handler);
-	signal(SIGSEGV, sig_handler);
+	//signal(SIGABRT, sig_handler);
+	//signal(SIGSEGV, sig_handler);
 
 	for (i = 0; i < thread_num; ++i)
 		pthread_join(thread[i], NULL);

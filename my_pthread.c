@@ -92,12 +92,12 @@ void heap_push(thread_HQ h, tcb_ptr value){
 
  	index = h->count; // First insert at last of array
 
-        // Find out where to put the element and put it
-        while(index > 0){
-            parent = (index - 1) / 2;
-            if( h->heaparr[parent]->priority > value->priority )
+    // Find out where to put the element and put it
+    while(index > 0){
+        parent = (index - 1) / 2;
+        if( h->heaparr[parent]->priority > value->priority )
                 break;
-            if( h->heaparr[parent]->priority == value->priority ){
+        if( h->heaparr[parent]->priority == value->priority ){
                 // If priorities are same, check for timestamp
                 clock_t now = clock();
                 clock_t value_age = (now - value->start_time) / CLOCKS_PER_SEC;
@@ -108,14 +108,14 @@ void heap_push(thread_HQ h, tcb_ptr value){
                     break;
                 }
                 // else keep moving value up the heap
-            }
-
-            h->heaparr[index] = h->heaparr[parent];
-            index = parent;
         }
 
-        printf("Pushing:%d\n", value->thread_id);
-        //copyThreadContext(h->heaparr[index], value);
+        h->heaparr[index] = h->heaparr[parent];
+        index = parent;
+    }
+
+    printf("Pushing:%d\n", value->thread_id);
+    //copyThreadContexth->heaparr[index], value);
     h->heaparr[index] = value;
     h->count++;
 
@@ -124,6 +124,7 @@ void heap_push(thread_HQ h, tcb_ptr value){
         h->heaparr[i]->next = h->heaparr[i+1];
     }
     h->heaparr[i]->next = NULL;
+
     sigprocmask(SIG_UNBLOCK, &signalMask, NULL);
 }
 
@@ -147,7 +148,7 @@ void removeFromHeap(my_pthread_t threadId){
         if( queue->heaparr[i]->thread_id == threadId ){
             int j = i;
             while(queue->heaparr[j]->next != NULL){
-                queue->heaparr[j] = queue->heaparr[j+1]
+                queue->heaparr[j] = queue->heaparr[j+1];
                 j++;
             }
             queue->count--;
@@ -318,8 +319,8 @@ finishedThread_ptr getCompletedThread() {
   if(finishedThread == NULL) {
     return NULL;
   }
-  finishedThread->returnValue=(void**)malloc(sizeof(void*));
-  if(finishedThread->returnValue ==NULL) {
+  finishedThread->returnValue = (void**)malloc(sizeof(void*));
+  if(finishedThread->returnValue == NULL) {
     free(finishedThread);
     return NULL;
   }
@@ -343,8 +344,7 @@ void threadCompleted() {
   tcb_ptr currentNode = getCurrentControlBlock_Safe();
   blockedThreadList_ptr blockedThread = currentNode->blockedThreads;
 
-  while(blockedThread != NULL)
-  {
+  while(blockedThread != NULL){
     blockedThread->thread->isBlocked =0;
     blockedThread = blockedThread->next;
   }
@@ -580,7 +580,7 @@ int my_pthread_create(my_pthread_t * thread, pthread_attr_t * attr, void *(*func
 
     printf("Thread is created %d\n", *thread);
     threadBegin[*thread] = clock();
-    //heap_push(queue, threadCB);
+    heap_push(queue, threadCB);
     printf("Pushed\n");
     // start timer here
     threadCB->start_time = clock();
@@ -675,11 +675,6 @@ int my_pthread_join(my_pthread_t thread, void **value_ptr) {
       free(finishedThread);
       threadEnd[joinThread->thread_id]=clock();
       threadTime[joinThread->thread_id] = (double) (threadEnd[joinThread->thread_id]-threadBegin[joinThread->thread_id])/CLOCKS_PER_SEC;
-    }
-    // Check for threads remaining in heap
-    if(getQSize(queue) == 0){
-        // Bring back MainThread Context
-
     }
 
     printf("Returning from join\n");

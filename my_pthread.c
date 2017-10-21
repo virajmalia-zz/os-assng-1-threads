@@ -373,7 +373,7 @@ void *helper(void *(*function)(void*), void *arg){
 
   void *returnValue;
   tcb_ptr currentThread = getCurrentControlBlock_Safe();
-  //printf("In Helper");
+  printf("In Helper");
   returnValue = (*function)(arg);
   sigprocmask(SIG_BLOCK,&signalMask,NULL);
   finishedThread_ptr finishedThread = getCompletedThread();
@@ -541,7 +541,7 @@ void my_pthread_init(long period){
   getCommonContext();
   mainThread->thread_context.uc_link = &common_context;
   mainThread->thread_id = threadid;
-  //heap_push(queue, mainThread);
+  heap_push(queue, mainThread);
   memset(&scheduler_interrupt_handler, 0, sizeof (scheduler_interrupt_handler));
   scheduler_interrupt_handler.sa_handler= &scheduler;
   sigaction(SIGVTALRM,&scheduler_interrupt_handler,NULL);
@@ -659,7 +659,8 @@ int my_pthread_join(my_pthread_t thread, void **value_ptr) {
     sigprocmask(SIG_UNBLOCK,&signalMask,NULL);
 
     while(isBlocked){
-        threadCompleted();
+        //my_pthread_yield();
+        //threadCompleted();
         //printf("Stuck in while loop\n");
       isBlocked=callingThread->isBlocked;
     }

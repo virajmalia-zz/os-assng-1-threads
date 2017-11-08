@@ -1,4 +1,4 @@
-queue// File:	my_pthread.c
+// File:	my_pthread.c
 // Author:	Yujie REN
 // Date:	09/23/2017
 
@@ -25,7 +25,7 @@ typedef struct {
 
 static bool first_create = true;
 static int threadid;
-extern ucontext_t common_context;
+ucontext_t common_context;
 struct sigaction scheduler_interrupt_handler;
 struct itimerval timeslice;
 sigset_t signalMask;
@@ -409,6 +409,7 @@ tcb_ptr getCurrentBlock(thread_Queue queue){
     printf("\n Returning CurrentBlock\n");
     return queue->heaparr[0];
   }
+  printf("Returning Null from current block\n");
   return NULL;
 }
 
@@ -601,7 +602,7 @@ int my_pthread_mutex_init(my_pthread_mutex_t *mutex, const pthread_mutexattr_t *
 
 /* aquire the mutex lock */
 int my_pthread_mutex_lock(my_pthread_mutex_t *mutex) {
-  printf("Mutex lock called \n");
+  //printf("Mutex lock called \n");
   sigemptyset(&signalMask);
   sigaddset(&signalMask, SIGVTALRM);
   sigprocmask(SIG_BLOCK,&signalMask, NULL);
@@ -631,7 +632,7 @@ int my_pthread_mutex_lock(my_pthread_mutex_t *mutex) {
 
 /* release the mutex lock */
 int my_pthread_mutex_unlock(my_pthread_mutex_t *mutex) {
-  printf("Mutex unlock called \n");
+  //printf("Mutex unlock called \n");
   sigprocmask(SIG_BLOCK,&signalMask,NULL);
   tcb_ptr currentThread = getCurrentBlock(queue);
   if(mutex->owner == currentThread->thread_id) {
